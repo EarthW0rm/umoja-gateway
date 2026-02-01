@@ -37,7 +37,7 @@ No separate npm publish is required when using the monorepo path.
 
 ## Quick Start
 
-1. Implement the **AuthRepository** interface (your storage for clients, users, tokens). Optionally implement **validateApiKey** and **validateBasicAuth** so the repository is the single data conduit for API key and Basic auth.
+1. Implement the **AuthRepository** interface (your storage for products, clients, users, tokens). Optionally implement **validateApiKey** and **validateBasicAuth** so the repository is the single data conduit for API key and Basic auth.
 2. Register **OauthModule.forRoot()** or **OauthModule.forRootAsync()** with `model` (your auth repository) and optional `token`/JWT config.
 3. Use **OAuthGuard** on protected routes; read `request.user` and `request.oauth` in handlers.
 4. Optionally use **OAuthScopeGuard** + **@OAuthScopes()** for scope-based access, or **ApiKeyGuard** / **BasicAuthGuard** (they use **AUTH_REPOSITORY** directly when the repository implements **validateApiKey** and **validateBasicAuth**).
@@ -132,6 +132,12 @@ The module exports: **OauthService**, **OAuthGuard**, **OAuthOptionalGuard**, **
 ## Auth Repository
 
 You must implement **AuthRepository**, which composes the contracts for the grant types you use. The library uses the token **AUTH_REPOSITORY** for DI; register your implementation with that token. All handlers and guards that need storage inject **authRepository** (same token).
+
+### Application container (product scope)
+
+- **getProduct(productId)** – Return the application container (`OAuthProduct`) that owns clients; include brand metadata such as logo URL, privacy policy URL, and owners.
+- **getProductClients(productId)** – Return all OAuth clients that belong to the product.
+- Clients may carry `productId` and `product` metadata so the library can surface the owning product alongside client details.
 
 ### Required for all flows
 

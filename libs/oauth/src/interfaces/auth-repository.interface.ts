@@ -1,10 +1,11 @@
 import type {
+  ApiKeyRepository,
   AuthorizationCodeRepository,
   BasicAuthRepository,
   ClientCredentialsRepository,
   PasswordRepository,
+  ProductRepository,
   RefreshTokenRepository,
-  ApiKeyRepository,
 } from './model.interfaces';
 import type { BasicAuthValidationResult } from '../guards';
 
@@ -22,4 +23,5 @@ export interface AuthRepository
   ClientCredentialsRepository,
   RefreshTokenRepository,
   BasicAuthRepository,
+  ProductRepository,
   ApiKeyRepository { }

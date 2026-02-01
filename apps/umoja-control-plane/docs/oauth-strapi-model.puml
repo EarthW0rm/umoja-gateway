@@ -1,0 +1,115 @@
+' OAuth content model for Strapi (umoja-control-plane)
+' Apply: create content types under src/api/<name>/content-types/<name>/schema.json
+' Render: plantuml -tpng oauth-strapi-model.puml
+@startuml oauth-strapi-model
+!theme plain
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+skinparam classAttributeIconSize 0
+
+title OAuth Content Model – Strapi\n(api::oauth-*.schema)
+
+class "api::oauth-client.oauth-client" as client <<collectionType>> {
+  info: singularName pluralName displayName
+  --
+  redirectUris : json
+  clientSecret : string
+  grants : json
+  accessTokenLifetime : integer
+  refreshTokenLifetime : integer
+  --
+  product : relation manyToOne oauth-product
+  user : relation manyToOne oauth-user
+  audiences : relation manyToMany audience
+}
+
+class "api::oauth-product.oauth-product" as product <<collectionType>> {
+  info: singularName pluralName displayName
+  --
+  name : string
+  description : text
+  logoUri : string
+  privacyPolicyUrl : string
+  termsOfServiceUrl : string
+  owners : json
+  --
+  clients : relation oneToMany oauth-client
+}
+
+class "api::oauth-user.oauth-user" as user <<collectionType>> {
+  info: singularName pluralName displayName
+  --
+  username : string
+  password : string
+  --
+  audiences : relation manyToMany audience
+}
+
+class "api::audience.audience" as audience <<collectionType>> {
+  info: singularName pluralName displayName
+  --
+  value : string
+  description : text
+}
+
+class "api::oauth-token.oauth-token" as token <<collectionType>> {
+  info: singularName pluralName displayName
+  --
+  accessToken : string
+  accessTokenExpiresAt : datetime
+  refreshToken : string
+  refreshTokenExpiresAt : datetime
+  scope : json
+  --
+  client : relation manyToOne oauth-client
+  user : relation manyToOne oauth-user
+}
+
+class "api::refresh-token.refresh-token" as refresh <<collectionType>> {
+  info: singularName pluralName displayName
+  --
+  refreshToken : string
+  refreshTokenExpiresAt : datetime
+  scope : json
+  --
+  client : relation manyToOne oauth-client
+  user : relation manyToOne oauth-user
+}
+
+class "api::authorization-code.authorization-code" as authz <<collectionType>> {
+  info: singularName pluralName displayName
+  --
+  authorizationCode : string
+  expiresAt : datetime
+  redirectUri : string
+  scope : json
+  codeChallenge : string
+  codeChallengeMethod : string
+  --
+  client : relation manyToOne oauth-client
+  user : relation manyToOne oauth-user
+}
+
+class "api::api-key.api-key" as apikey <<collectionType>> {
+  info: singularName pluralName displayName
+  --
+  apiKey : string
+  description : text
+  --
+  client : relation manyToOne oauth-client
+}
+
+client ||--o{ token : tokens
+user ||--o{ token : tokens
+client ||--o{ refresh : refreshTokens
+user ||--o{ refresh : refreshTokens
+client ||--o{ authz : authorizationCodes
+user ||--o{ authz : authorizationCodes
+
+client "*" -- "*" audience : audiences
+user "*" -- "*" audience : audiences
+
+client ||--o{ apikey : apiKeys
+product ||--o{ client : clients
+
+@enduml

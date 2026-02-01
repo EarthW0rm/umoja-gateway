@@ -1,5 +1,6 @@
 import type { AuthorizationCode } from './authorization-code.interface';
 import type { OAuthClient } from './client.interface';
+import type { OAuthProduct } from './product.interface';
 import type { OAuthToken } from './token.interface';
 import type { OAuthUser } from './user.interface';
 import type { RefreshToken } from './refresh-token.interface';
@@ -26,6 +27,20 @@ export interface BaseRepository {
    * Resolves allowed audiences for JWT access tokens.
    */
   getAudiences?(client: OAuthClient, user: OAuthUser, scope?: string[]): Promise<string[] | string | Falsey>;
+}
+
+/**
+ * Input payload contract for product-level repository operations.
+ */
+export interface ProductRepository {
+  /**
+   * Retrieves a product container by identifier.
+   */
+  getProduct(productId: string): Promise<OAuthProduct | Falsey>;
+  /**
+   * Retrieves OAuth clients that belong to the product.
+   */
+  getProductClients(productId: string): Promise<OAuthClient[] | Falsey>;
 }
 
 /**

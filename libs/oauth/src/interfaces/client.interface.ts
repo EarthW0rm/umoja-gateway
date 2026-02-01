@@ -1,3 +1,5 @@
+import type { OAuthProduct } from './product.interface';
+
 /**
  * Input payload describing an OAuth client application.
  */
@@ -26,6 +28,14 @@ export interface OAuthClient {
    * Optional per-client refresh token lifetime in seconds.
    */
   refreshTokenLifetime?: number;
+  /**
+   * Identifier of the product that owns this client.
+   */
+  productId?: string;
+  /**
+   * Product container metadata for this client.
+   */
+  product?: OAuthProduct;
   /**
    * Additional client metadata (e.g. scope, userId, audiences).
    */

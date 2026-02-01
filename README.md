@@ -60,6 +60,8 @@ Unit tests live next to source (`*.spec.ts`). E2E tests for auth and guards are 
 
 - **[libs/oauth/README.md](libs/oauth/README.md)** – OAuth library: installation, module registration, auth repository, guards, decorators, configuration, and full app integration example.
 - **[libs/oauth/CONTRIBUTING.md](libs/oauth/CONTRIBUTING.md)** – Contributing guide for the OAuth library (layout, testing, code standards, commit messages).
+- **[apps/umoja-api/docs/oauth-entities.puml](apps/umoja-api/docs/oauth-entities.puml)** – PlantUML entity model for the OAuth repository (includes Product → Clients). Render with `plantuml -tpng apps/umoja-api/docs/oauth-entities.puml`.
+- **[apps/umoja-control-plane/docs/oauth-strapi-model.puml](apps/umoja-control-plane/docs/oauth-strapi-model.puml)** – PlantUML content model for Strapi (includes oauth-product and its 1:N clients). Render with `plantuml -tpng apps/umoja-control-plane/docs/oauth-strapi-model.puml`.
 
 ---
 

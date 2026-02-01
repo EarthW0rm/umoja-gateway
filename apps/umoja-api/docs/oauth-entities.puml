@@ -1,0 +1,131 @@
+' OAuth Repository – Entity model
+' Reflects data entities required to feed AuthRepository (libs/oauth).
+' Render: plantuml -tpng oauth-entities.puml
+@startuml oauth-entities
+!theme plain
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+skinparam classAttributeIconSize 0
+
+title OAuth Repository – Data Entities\n(Entities required to feed AuthRepository)
+
+class "OAuthClient" as client <<Entity>> {
+  + id : string <<PK>>
+  --
+  redirectUris : string or string[]
+  clientSecret : string
+  grants : string[] or string
+  accessTokenLifetime : number
+  refreshTokenLifetime : number
+  userId : string <<optional>>
+  audiences : string[] <<optional>>
+  --
+  + [key: string] : unknown
+}
+
+note right of client
+  AuthRepository uses:
+  getClient(id, secret)
+  saveToken / getAccessToken
+  getUser / getUserFromClient
+  getRefreshToken / revokeToken
+  getAuthorizationCode / saveAuthorizationCode / revokeAuthorizationCode
+  validateApiKey (optional)
+  validateBasicAuth (optional)
+end note
+
+class "OAuthUser" as user <<Entity>> {
+  + [key: string] : unknown
+  --
+  <<typical>>
+  id : string
+  username : string
+  password : string <<not exposed>>
+  audiences : string[] <<optional>>
+}
+
+class "OAuthToken" as token <<Entity>> {
+  + accessToken : string <<PK>>
+  --
+  accessTokenExpiresAt : Date
+  refreshToken : string
+  refreshTokenExpiresAt : Date
+  scope : string[]
+  --
+  client : OAuthClient <<ref>>
+  user : OAuthUser <<ref>>
+  --
+  + [key: string] : unknown
+}
+
+class "RefreshToken" as refresh <<Entity>> {
+  + refreshToken : string <<PK>>
+  --
+  refreshTokenExpiresAt : Date
+  scope : string[]
+  --
+  client : OAuthClient <<ref>>
+  user : OAuthUser <<ref>>
+  --
+  + [key: string] : unknown
+}
+
+class "AuthorizationCode" as authz <<Entity>> {
+  + authorizationCode : string <<PK>>
+  --
+  expiresAt : Date
+  redirectUri : string
+  scope : string[]
+  codeChallenge : string
+  codeChallengeMethod : string
+  --
+  client : OAuthClient <<ref>>
+  user : OAuthUser <<ref>>
+  --
+  + [key: string] : unknown
+}
+
+class "ApiKey" as apikey <<Entity,optional>> {
+  + apiKey : string <<lookup>>
+  --
+  clientId : string
+  description : string
+}
+
+class "Audience" as audience <<Entity>> {
+  + id : string <<PK>>
+  --
+  value : string
+  description : string <<optional>>
+}
+
+class "OAuthProduct" as product <<Entity>> {
+  + id : string <<PK>>
+  --
+  name : string
+  description : string <<optional>>
+  logoUri : string <<optional>>
+  privacyPolicyUrl : string <<optional>>
+  termsOfServiceUrl : string <<optional>>
+  owners : string[] <<optional>>
+  --
+  clients : OAuthClient[] <<derived>>
+  --
+  + [key: string] : unknown
+}
+
+client ||--o{ token : "issues"
+user ||--o{ token : "owns"
+client ||--o{ refresh : "issues"
+user ||--o{ refresh : "owns"
+client ||--o{ authz : "requests"
+user ||--o{ authz : "authorizes"
+
+client "*" -- "*" audience : has
+user "*" -- "*" audience : has
+
+product ||--o{ client : "owns"
+
+apikey -[#gray,dashed]-> client : optional
+
+@enduml

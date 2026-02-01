@@ -1,5 +1,12 @@
 import { InMemoryAuthRepository } from './in-memory-auth.repository';
-import type { OAuthClient, OAuthUser, OAuthToken, RefreshToken, AuthorizationCode } from '@oauth/oauth';
+import type {
+  OAuthClient,
+  OAuthUser,
+  OAuthToken,
+  RefreshToken,
+  AuthorizationCode,
+  OAuthProduct,
+} from '@oauth/oauth';
 
 describe('InMemoryAuthRepository', () => {
   let repo: InMemoryAuthRepository;
@@ -8,6 +15,12 @@ describe('InMemoryAuthRepository', () => {
     clientSecret: 'cs1',
     grants: ['password'],
     redirectUris: [],
+  };
+  const product: OAuthProduct = {
+    id: 'p1',
+    name: 'Umoja Dashboard',
+    logoUri: 'https://example.com/logo.png',
+    privacyPolicyUrl: 'https://example.com/privacy',
   };
   const user: OAuthUser & { password?: string } = {
     id: 'u1',
@@ -41,6 +54,33 @@ describe('InMemoryAuthRepository', () => {
     it('returns null when client does not exist', async () => {
       const result = await repo.getClient('unknown', null);
       expect(result).toBeNull();
+    });
+
+    it('returns client with product metadata when product exists', async () => {
+      repo.upsertProduct(product);
+      repo.upsertClient({ ...client, productId: product.id });
+      const result = await repo.getClient(client.id, null);
+      if (!result) {
+        throw new Error('Expected client to be returned');
+      }
+      expect(result.product).toBeTruthy();
+      expect(result.productId).toBe(product.id);
+      expect(result.product?.name).toBe(product.name);
+    });
+
+    it('stores embedded product metadata and links productId', async () => {
+      const embeddedProduct: OAuthProduct = {
+        id: 'p2',
+        name: 'Embedded Product',
+        termsOfServiceUrl: 'https://example.com/tos',
+      };
+      repo.upsertClient({ ...client, id: 'c2', product: embeddedProduct });
+      const found = await repo.getClient('c2', null);
+      if (!found) {
+        throw new Error('Expected client to be returned');
+      }
+      expect(found.productId).toBe(embeddedProduct.id);
+      expect(found.product?.name).toBe(embeddedProduct.name);
     });
   });
 
@@ -224,6 +264,37 @@ describe('InMemoryAuthRepository', () => {
         user,
       } as AuthorizationCode);
       expect(revoked).toBe(false);
+    });
+  });
+
+  describe('getProduct / getProductClients / upsertProduct', () => {
+    it('returns product with linked clients when present', async () => {
+      repo.upsertProduct(product);
+      repo.upsertClient({ ...client, productId: product.id });
+      const result = await repo.getProduct(product.id);
+      if (!result) {
+        throw new Error('Expected product to be returned');
+      }
+      expect(result.id).toBe(product.id);
+      expect(result.clients).toBeTruthy();
+      expect(result.clients?.[0].id).toBe(client.id);
+    });
+
+    it('getProduct returns null when product does not exist', async () => {
+      const result = await repo.getProduct('missing');
+      expect(result).toBeNull();
+    });
+
+    it('getProductClients returns empty array when product exists without clients', async () => {
+      repo.upsertProduct(product);
+      const result = await repo.getProductClients(product.id);
+      expect(result).toBeTruthy();
+      expect((result as OAuthClient[]).length).toBe(0);
+    });
+
+    it('getProductClients returns null when product does not exist', async () => {
+      const result = await repo.getProductClients('missing');
+      expect(result).toBeNull();
     });
   });
 
