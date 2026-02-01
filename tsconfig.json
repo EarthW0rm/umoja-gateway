@@ -23,6 +23,12 @@
       ],
       "@core/core/*": [
         "libs/core/src/*"
+      ],
+      "@oauth/oauth": [
+        "libs/oauth/src"
+      ],
+      "@oauth/oauth/*": [
+        "libs/oauth/src/*"
       ]
     }
   }

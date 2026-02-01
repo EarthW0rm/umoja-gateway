@@ -1,0 +1,168 @@
+import { isFormat } from '../utils/formats.util';
+import {
+  InvalidArgumentException,
+  InvalidGrantException,
+  InvalidRequestException,
+  ServerException,
+} from '../exceptions';
+import { getHashForCodeChallenge } from '../pkce/pkce.util';
+import type { AuthorizationCode, OAuthClient, OAuthToken, OAuthUser } from '../interfaces';
+import { AbstractGrantType } from './abstract-grant-type';
+
+export class AuthorizationCodeGrantType extends AbstractGrantType {
+  constructor(options: { accessTokenLifetime: number; model: Record<string, any>; refreshTokenLifetime?: number }) {
+    if (!options.model) {
+      throw new InvalidArgumentException('Missing parameter: `model`');
+    }
+
+    if (!options.model.getAuthorizationCode) {
+      throw new InvalidArgumentException('Invalid argument: model does not implement `getAuthorizationCode()`');
+    }
+
+    if (!options.model.revokeAuthorizationCode) {
+      throw new InvalidArgumentException('Invalid argument: model does not implement `revokeAuthorizationCode()`');
+    }
+
+    if (!options.model.saveToken) {
+      throw new InvalidArgumentException('Invalid argument: model does not implement `saveToken()`');
+    }
+
+    super(options);
+  }
+
+  async handle(request: { body: Record<string, unknown>; query?: Record<string, string> }, client: OAuthClient) {
+    if (!request) {
+      throw new InvalidArgumentException('Missing parameter: `request`');
+    }
+
+    if (!client) {
+      throw new InvalidArgumentException('Missing parameter: `client`');
+    }
+
+    const code = await this.getAuthorizationCode(request, client);
+    await this.revokeAuthorizationCode(code);
+    this.validateRedirectUri(request, code);
+
+    return this.saveToken(code.user, client, code.authorizationCode, code.scope);
+  }
+
+  async getAuthorizationCode(
+    request: { body: Record<string, unknown> },
+    client: OAuthClient,
+  ): Promise<AuthorizationCode> {
+    const codeValue = request.body.code as string | undefined;
+    if (!codeValue) {
+      throw new InvalidRequestException('Missing parameter: `code`');
+    }
+
+    if (!isFormat.vschar(codeValue)) {
+      throw new InvalidRequestException('Invalid parameter: `code`');
+    }
+
+    const code = await this.model.getAuthorizationCode(codeValue);
+    if (!code) {
+      throw new InvalidGrantException('Invalid grant: authorization code is invalid');
+    }
+
+    if (!code.client) {
+      throw new ServerException('Server error: `getAuthorizationCode()` did not return a `client` object');
+    }
+
+    if (!code.user) {
+      throw new ServerException('Server error: `getAuthorizationCode()` did not return a `user` object');
+    }
+
+    if (code.client.id !== client.id) {
+      throw new InvalidGrantException('Invalid grant: authorization code is invalid');
+    }
+
+    if (!(code.expiresAt instanceof Date)) {
+      throw new ServerException('Server error: `expiresAt` must be a Date instance');
+    }
+
+    if (code.expiresAt < new Date()) {
+      throw new InvalidGrantException('Invalid grant: authorization code has expired');
+    }
+
+    if (code.redirectUri && !isFormat.uri(code.redirectUri)) {
+      throw new InvalidGrantException('Invalid grant: `redirect_uri` is not a valid URI');
+    }
+
+    if (code.codeChallenge) {
+      const verifier = request.body.code_verifier as string | undefined;
+      if (!verifier) {
+        throw new InvalidGrantException('Missing parameter: `code_verifier`');
+      }
+
+      const hash = getHashForCodeChallenge({
+        method: code.codeChallengeMethod,
+        verifier,
+      });
+
+      if (!hash) {
+        throw new ServerException(
+          'Server error: `getAuthorizationCode()` did not return a valid `codeChallengeMethod` property',
+        );
+      }
+
+      if (code.codeChallenge !== hash) {
+        throw new InvalidGrantException('Invalid grant: code verifier is invalid');
+      }
+    } else if (request.body.code_verifier) {
+      throw new InvalidGrantException('Invalid grant: code verifier is invalid');
+    }
+
+    return code;
+  }
+
+  validateRedirectUri(request: { body: Record<string, unknown>; query?: Record<string, string> }, code: AuthorizationCode) {
+    if (!code.redirectUri) {
+      return;
+    }
+
+    const redirectUri =
+      (request.body.redirect_uri as string | undefined) ?? request.query?.redirect_uri ?? undefined;
+
+    if (!redirectUri || !isFormat.uri(redirectUri)) {
+      throw new InvalidRequestException('Invalid request: `redirect_uri` is not a valid URI');
+    }
+
+    if (redirectUri !== code.redirectUri) {
+      throw new InvalidRequestException('Invalid request: `redirect_uri` is invalid');
+    }
+  }
+
+  async revokeAuthorizationCode(code: AuthorizationCode) {
+    const status = await this.model.revokeAuthorizationCode(code);
+    if (!status) {
+      throw new InvalidGrantException('Invalid grant: authorization code is invalid');
+    }
+    return code;
+  }
+
+  async saveToken(
+    user: OAuthUser,
+    client: OAuthClient,
+    authorizationCode: string,
+    requestedScope?: string[],
+  ): Promise<OAuthToken> {
+    const validatedScope = await this.validateScope(user, client, requestedScope);
+    const accessToken = await this.generateAccessToken(client, user, validatedScope);
+    const refreshToken = await this.generateRefreshToken(client, user, validatedScope);
+    const accessTokenExpiresAt = this.getAccessTokenExpiresAt();
+    const refreshTokenExpiresAt = this.getRefreshTokenExpiresAt();
+
+    const token: OAuthToken = {
+      accessToken,
+      authorizationCode,
+      accessTokenExpiresAt,
+      refreshToken,
+      refreshTokenExpiresAt,
+      scope: validatedScope,
+      client,
+      user,
+    } as OAuthToken;
+
+    return this.model.saveToken(token, client, user);
+  }
+}

@@ -5,24 +5,35 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ],
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/apps/umoja-gateway/main",
+    "start:prod": "node dist/apps/umoja-api/main",
+    "control-plane:build": "npm --prefix apps/umoja-control-plane run build",
+    "control-plane:console": "npm --prefix apps/umoja-control-plane run console",
+    "control-plane:dev": "npm --prefix apps/umoja-control-plane run develop",
+    "control-plane:seed": "npm --prefix apps/umoja-control-plane run seed:example",
+    "control-plane:start": "npm --prefix apps/umoja-control-plane run start",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./apps/umoja-gateway/test/jest-e2e.json"
+    "test:e2e": "jest --config ./apps/umoja-api/test/jest-e2e.json"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-fastify": "^11.1.12",
+    "fastify": "^5.7.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
@@ -74,7 +85,8 @@
       "<rootDir>/apps/"
     ],
     "moduleNameMapper": {
-      "^@core/core(|/.*)$": "<rootDir>/libs/core/src/$1"
+      "^@core/core(|/.*)$": "<rootDir>/libs/core/src/$1",
+      "^@oauth/oauth(|/.*)$": "<rootDir>/libs/oauth/src/$1"
     }
   }
 }

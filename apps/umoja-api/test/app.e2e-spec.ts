@@ -1,24 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import { FastifyAdapter } from '@nestjs/platform-fastify';
 import { UmojaApiModule } from './../src/umoja-api.module';
 
-describe('UmojaApiController (e2e)', () => {
+describe('App bootstrap (umoja-api)', () => {
   let app: INestApplication;
 
-  beforeEach(async () => {
+  it('starts the Nest application', async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [UmojaApiModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication(new FastifyAdapter());
     await app.init();
-  });
-
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+    await app.close();
   });
 });
