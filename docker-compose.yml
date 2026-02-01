@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: umoja-postgres
+    environment:
+      POSTGRES_DB: umoja-control-plane-data
+      POSTGRES_USER: control-plane-user
+      POSTGRES_PASSWORD: control-plane-p@ssw0rd
+    ports:
+      - "5432:5432"
+    volumes:
+      - umoja-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  umoja-postgres-data:
