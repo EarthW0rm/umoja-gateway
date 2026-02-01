@@ -9,6 +9,7 @@ export interface BaseModel {
   generateAccessToken?(client: OAuthClient, user: OAuthUser, scope?: string[]): Promise<string>;
   getClient(clientId: string, clientSecret: string | null): Promise<OAuthClient | Falsey>;
   saveToken(token: OAuthToken, client: OAuthClient, user: OAuthUser): Promise<OAuthToken | Falsey>;
+  getAudiences?(client: OAuthClient, user: OAuthUser, scope?: string[]): Promise<string[] | string | Falsey>;
 }
 
 export interface RequestAuthenticationModel {

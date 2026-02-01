@@ -10,11 +10,23 @@ export class AuthExampleController {
   @Post('clients')
   createClient(
     @Headers('x-api-key') apiKey: string | undefined,
-    @Body() body: { name: string; grants?: string[]; redirectUris?: string[]; scopes?: string[] },
+    @Body()
+    body: {
+      name: string;
+      grants?: string[];
+      redirectUris?: string[];
+      scopes?: string[];
+      audiences?: string[];
+    },
   ) {
     this.service.validateApiKey(apiKey);
     const client = this.service.registerClient(body);
-    return { clientId: client.id, clientSecret: client.clientSecret, grants: client.grants };
+    return {
+      clientId: client.id,
+      clientSecret: client.clientSecret,
+      grants: client.grants,
+      audiences: (client as any).audiences,
+    };
   }
 
   @Post('users')

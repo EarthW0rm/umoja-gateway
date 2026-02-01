@@ -14,51 +14,56 @@ import { UmojaException } from '@core/core';
 import { parseScope } from '../utils/scope.util';
 import { generateRandomToken } from '../utils/token.util';
 import { CodeResponseType } from '../response-types/code-response-type';
-import * as pkce from '../pkce/pkce.util';
-import type { OAuthClient, OAuthUser } from '../interfaces';
+import * as pkce from '../utils/pkce/pkce.util';
+import type { OAuthClient, OAuthUser, ServerOptions } from '../interfaces';
+import type { AuthRepository } from '../interfaces/auth-repository.interface';
 import { AuthenticateHandler } from './authenticate.handler';
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { Inject, Injectable } from '@nestjs/common';
+import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from '../config/oauth.tokens';
 
 const responseTypes = {
   code: CodeResponseType,
 };
 
+@Injectable()
 export class AuthorizeHandler {
   private allowEmptyState?: boolean;
-  private authenticateHandler?: { handle: (request: FastifyRequest, response: FastifyReply) => Promise<OAuthUser> };
+  private authenticateHandler: { handle: (request: FastifyRequest, response: FastifyReply) => Promise<OAuthUser> };
   private authorizationCodeLifetime: number;
-  private model: Record<string, any>;
+  private oauthRepository: AuthRepository | Record<string, any>;
 
-  constructor(options: {
-    model: Record<string, any>;
-    authenticateHandler?: { handle: (request: FastifyRequest, response: FastifyReply) => Promise<OAuthUser> };
-    allowEmptyState?: boolean;
-    authorizationCodeLifetime: number;
-  }) {
+  constructor(
+    @Inject(OAUTH2_SERVER_OPTIONS)
+    options: ServerOptions & {
+      authenticateHandler?: { handle: (request: FastifyRequest, response: FastifyReply) => Promise<OAuthUser> };
+      allowEmptyState?: boolean;
+      authorizationCodeLifetime?: number;
+    },
+    authenticateHandler: AuthenticateHandler,
+    @Inject(AUTH_REPOSITORY) oauthRepository: AuthRepository,
+  ) {
     if (options.authenticateHandler && !options.authenticateHandler.handle) {
       throw new InvalidArgumentException('Invalid argument: authenticateHandler does not implement `handle()`');
     }
 
-    if (!options.authorizationCodeLifetime) {
-      throw new InvalidArgumentException('Missing parameter: `authorizationCodeLifetime`');
-    }
+    const model = oauthRepository as AuthRepository | Record<string, any>;
 
-    if (!options.model) {
-      throw new InvalidArgumentException('Missing parameter: `model`');
-    }
-
-    if (!options.model.getClient) {
+    if (!model.getClient) {
       throw new InvalidArgumentException('Invalid argument: model does not implement `getClient()`');
     }
 
-    if (!options.model.saveAuthorizationCode) {
+    if (!model.saveAuthorizationCode) {
       throw new InvalidArgumentException('Invalid argument: model does not implement `saveAuthorizationCode()`');
     }
 
-    this.allowEmptyState = options.allowEmptyState;
-    this.authenticateHandler = options.authenticateHandler;
-    this.authorizationCodeLifetime = options.authorizationCodeLifetime;
-    this.model = options.model;
+    this.allowEmptyState = options.allowEmptyState ?? false;
+    this.authenticateHandler = options.authenticateHandler ?? authenticateHandler;
+    if (!this.authenticateHandler) {
+      throw new InvalidArgumentException('Missing parameter: `authenticateHandler`');
+    }
+    this.authorizationCodeLifetime = options.authorizationCodeLifetime ?? 5 * 60;
+    this.oauthRepository = model;
   }
 
   async handle(request: FastifyRequest, response: FastifyReply) {
@@ -114,8 +119,8 @@ export class AuthorizeHandler {
   }
 
   async generateAuthorizationCode(client: OAuthClient, user: OAuthUser, scope?: string[]) {
-    if (this.model.generateAuthorizationCode) {
-      return this.model.generateAuthorizationCode(client, user, scope);
+    if ((this.oauthRepository as any).generateAuthorizationCode) {
+      return (this.oauthRepository as any).generateAuthorizationCode(client, user, scope);
     }
     return generateRandomToken();
   }
@@ -143,7 +148,7 @@ export class AuthorizeHandler {
       throw new InvalidRequestException('Invalid request: `redirect_uri` is not a valid URI');
     }
 
-    const client = await this.model.getClient(clientId, null);
+    const client = await (this.oauthRepository as any).getClient(clientId, null);
     if (!client) {
       throw new InvalidClientException('Invalid client: client credentials are invalid');
     }
@@ -172,8 +177,8 @@ export class AuthorizeHandler {
   }
 
   async validateScope(user: OAuthUser, client: OAuthClient, scope?: string[]) {
-    if (this.model.validateScope) {
-      const validatedScope = await this.model.validateScope(user, client, scope);
+    if ((this.oauthRepository as any).validateScope) {
+      const validatedScope = await (this.oauthRepository as any).validateScope(user, client, scope);
       if (!validatedScope) {
         throw new InvalidScopeException('Invalid scope: Requested scope is invalid');
       }
@@ -202,18 +207,6 @@ export class AuthorizeHandler {
   }
 
   async getUser(request: FastifyRequest, response: FastifyReply): Promise<OAuthUser> {
-    if (!this.authenticateHandler) {
-      const handler = new AuthenticateHandler({
-        model: this.model,
-        allowBearerTokensInQueryString: false,
-      });
-      const handled = await handler.handle(request, response);
-      if (!handled?.user) {
-        throw new ServerException('Server error: `handle()` did not return a `user` object');
-      }
-      return handled.user;
-    }
-
     const user = await this.authenticateHandler.handle(request, response);
     if (!user) {
       throw new ServerException('Server error: `handle()` did not return a `user` object');
@@ -264,12 +257,12 @@ export class AuthorizeHandler {
       };
     }
 
-    return this.model.saveAuthorizationCode(code, client, user);
+    return (this.oauthRepository as any).saveAuthorizationCode(code, client, user);
   }
 
   async validateRedirectUri(redirectUri: string, client: OAuthClient) {
-    if (this.model.validateRedirectUri) {
-      return this.model.validateRedirectUri(redirectUri, client);
+    if ((this.oauthRepository as any).validateRedirectUri) {
+      return (this.oauthRepository as any).validateRedirectUri(redirectUri, client);
     }
 
     const redirectUris = Array.isArray(client.redirectUris) ? client.redirectUris : [client.redirectUris];

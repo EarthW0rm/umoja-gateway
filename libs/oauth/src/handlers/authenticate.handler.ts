@@ -10,47 +10,47 @@ import { UmojaException } from '@core/core';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { parseScope } from '../utils/scope.util';
 import { typeIs } from '../utils';
-import type { OAuthToken } from '../interfaces';
+import type { JwtTokenOptions, OAuthToken, ServerOptions } from '../interfaces';
+import type { AuthRepository } from '../interfaces/auth-repository.interface';
+import { Inject, Injectable } from '@nestjs/common';
+import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from '../config/oauth.tokens';
+import { resolveTokenOptions, verifyAccessTokenJwt, mapPayloadToOAuthToken } from '../utils';
 
+@Injectable()
 export class AuthenticateHandler {
   private addAcceptedScopesHeader?: boolean;
   private addAuthorizedScopesHeader?: boolean;
   private allowBearerTokensInQueryString?: boolean;
-  private model: Record<string, any>;
+  private oauthRepository: AuthRepository | Record<string, any>;
   private scope?: string[];
+  private jwtOptions?: JwtTokenOptions;
 
-  constructor(options: {
-    model: Record<string, any>;
-    scope?: string[] | string;
-    addAcceptedScopesHeader?: boolean;
-    addAuthorizedScopesHeader?: boolean;
-    allowBearerTokensInQueryString?: boolean;
-  }) {
-    if (!options.model) {
-      throw new InvalidArgumentException('Missing parameter: `model`');
-    }
+  constructor(
+    @Inject(OAUTH2_SERVER_OPTIONS)
+    options: ServerOptions & {
+      scope?: string[] | string;
+      addAcceptedScopesHeader?: boolean;
+      addAuthorizedScopesHeader?: boolean;
+      allowBearerTokensInQueryString?: boolean;
+    },
+    @Inject(AUTH_REPOSITORY) oauthRepository: AuthRepository,
+  ) {
+    const tokenOptions = resolveTokenOptions(options);
 
-    if (!options.model.getAccessToken) {
+    if (!oauthRepository.getAccessToken) {
       throw new InvalidArgumentException('Invalid argument: model does not implement `getAccessToken()`');
     }
 
-    if (options.scope && options.addAcceptedScopesHeader === undefined) {
-      throw new InvalidArgumentException('Missing parameter: `addAcceptedScopesHeader`');
-    }
-
-    if (options.scope && options.addAuthorizedScopesHeader === undefined) {
-      throw new InvalidArgumentException('Missing parameter: `addAuthorizedScopesHeader`');
-    }
-
-    if (options.scope && !options.model.verifyScope) {
+    if (options.scope && !oauthRepository.verifyScope) {
       throw new InvalidArgumentException('Invalid argument: model does not implement `verifyScope()`');
     }
 
-    this.addAcceptedScopesHeader = options.addAcceptedScopesHeader;
-    this.addAuthorizedScopesHeader = options.addAuthorizedScopesHeader;
-    this.allowBearerTokensInQueryString = options.allowBearerTokensInQueryString;
-    this.model = options.model;
+    this.addAcceptedScopesHeader = options.addAcceptedScopesHeader ?? true;
+    this.addAuthorizedScopesHeader = options.addAuthorizedScopesHeader ?? true;
+    this.allowBearerTokensInQueryString = options.allowBearerTokensInQueryString ?? false;
+    this.oauthRepository = oauthRepository;
     this.scope = Array.isArray(options.scope) ? options.scope : parseScope(options.scope);
+    this.jwtOptions = tokenOptions.jwt;
   }
 
   async handle(request: FastifyRequest, reply: FastifyReply) {
@@ -143,7 +143,18 @@ export class AuthenticateHandler {
   }
 
   async getAccessToken(token: string): Promise<OAuthToken> {
-    const accessToken = await this.model.getAccessToken(token);
+    if (this.jwtOptions && (this.jwtOptions.publicKey || this.jwtOptions.secret || this.jwtOptions.privateKey)) {
+      try {
+        const payload = verifyAccessTokenJwt(token, { ...this.jwtOptions, audience: undefined });
+        const oauthToken = mapPayloadToOAuthToken(token, payload);
+        await this.verifyAudience(oauthToken);
+        return oauthToken;
+      } catch (err) {
+        throw new InvalidTokenException('Invalid token: JWT verification failed', err as Error);
+      }
+    }
+
+    const accessToken = await this.oauthRepository.getAccessToken(token);
 
     if (!accessToken) {
       throw new InvalidTokenException('Invalid token: access token is invalid');
@@ -169,7 +180,7 @@ export class AuthenticateHandler {
   }
 
   async verifyScope(accessToken: OAuthToken) {
-    const scope = await this.model.verifyScope(accessToken, this.scope);
+    const scope = await this.oauthRepository.verifyScope?.(accessToken, this.scope);
 
     if (!scope) {
       throw new InsufficientScopeException('Insufficient scope: authorized scope is insufficient');
@@ -196,5 +207,43 @@ export class AuthenticateHandler {
       return value[0];
     }
     return value as string | undefined;
+  }
+
+  private async verifyAudience(accessToken: OAuthToken) {
+    const repo = this.oauthRepository as AuthRepository & {
+      getAudiences?: (client: any, user: any, scope?: string[]) => Promise<string[] | string | null>;
+    };
+
+    if (!repo.getAudiences) {
+      return;
+    }
+
+    const clientId = (accessToken.client as { id?: string } | undefined)?.id;
+    if (!clientId) {
+      throw new InvalidTokenException('Invalid token: missing client identifier');
+    }
+
+    const client = await repo.getClient(clientId, null);
+    if (!client) {
+      throw new InvalidTokenException('Invalid token: client is invalid');
+    }
+
+    const expectedAudiences = await repo.getAudiences(client, accessToken.user, accessToken.scope);
+    if (!expectedAudiences) {
+      return;
+    }
+
+    const allowed = Array.isArray(expectedAudiences) ? expectedAudiences : [expectedAudiences];
+    const presented = (accessToken as OAuthToken & { audience?: string[] | string }).audience;
+    const presentedArr = Array.isArray(presented)
+      ? presented
+      : typeof presented === 'string'
+        ? presented.split(' ')
+        : [];
+
+    const match = presentedArr.some((aud) => allowed.includes(aud));
+    if (!match) {
+      throw new InvalidTokenException('Invalid token: audience is not allowed');
+    }
   }
 }

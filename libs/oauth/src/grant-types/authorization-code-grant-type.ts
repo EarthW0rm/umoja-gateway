@@ -1,3 +1,4 @@
+import { Inject, Injectable } from '@nestjs/common';
 import { isFormat } from '../utils/formats.util';
 import {
   InvalidArgumentException,
@@ -5,29 +6,46 @@ import {
   InvalidRequestException,
   ServerException,
 } from '../exceptions';
-import { getHashForCodeChallenge } from '../pkce/pkce.util';
-import type { AuthorizationCode, OAuthClient, OAuthToken, OAuthUser } from '../interfaces';
+import { getHashForCodeChallenge } from '../utils/pkce/pkce.util';
+import type { AuthorizationCode, OAuthClient, OAuthToken, OAuthUser, AuthorizationCodeModel } from '../interfaces';
 import { AbstractGrantType } from './abstract-grant-type';
+import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from '../config/oauth.tokens';
+import type { ServerOptions } from '../interfaces';
+import { resolveTokenOptions } from '../utils';
 
+@Injectable()
 export class AuthorizationCodeGrantType extends AbstractGrantType {
-  constructor(options: { accessTokenLifetime: number; model: Record<string, any>; refreshTokenLifetime?: number }) {
-    if (!options.model) {
+  constructor(
+    @Inject(OAUTH2_SERVER_OPTIONS)
+    options: ServerOptions,
+    @Inject(AUTH_REPOSITORY) oauthRepository: AuthorizationCodeModel,
+  ) {
+    const tokenOptions = resolveTokenOptions(options);
+    const model = oauthRepository as AuthorizationCodeModel;
+    const merged = {
+      accessTokenLifetime: tokenOptions.accessTokenLifetime ?? 60 * 60,
+      refreshTokenLifetime: tokenOptions.refreshTokenLifetime ?? 60 * 60 * 24 * 14,
+      model,
+      alwaysIssueNewRefreshToken: tokenOptions.alwaysIssueNewRefreshToken ?? true,
+      jwtOptions: tokenOptions.jwt,
+    };
+    if (!model) {
       throw new InvalidArgumentException('Missing parameter: `model`');
     }
 
-    if (!options.model.getAuthorizationCode) {
+    if (!model.getAuthorizationCode) {
       throw new InvalidArgumentException('Invalid argument: model does not implement `getAuthorizationCode()`');
     }
 
-    if (!options.model.revokeAuthorizationCode) {
+    if (!model.revokeAuthorizationCode) {
       throw new InvalidArgumentException('Invalid argument: model does not implement `revokeAuthorizationCode()`');
     }
 
-    if (!options.model.saveToken) {
+    if (!model.saveToken) {
       throw new InvalidArgumentException('Invalid argument: model does not implement `saveToken()`');
     }
 
-    super(options);
+    super(merged);
   }
 
   async handle(request: { body: Record<string, unknown>; query?: Record<string, string> }, client: OAuthClient) {

@@ -13,4 +13,10 @@ export type {
   ClientCredentialsModel,
   ExtensionModel,
 } from './model.interfaces';
-export type { AuthenticateOptions, AuthorizeOptions, TokenOptions, ServerOptions } from './options.interface';
+export type {
+  AuthenticateOptions,
+  AuthorizeOptions,
+  TokenOptions,
+  ServerOptions,
+  JwtTokenOptions,
+} from './options.interface';

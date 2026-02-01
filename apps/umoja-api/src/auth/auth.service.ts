@@ -1,19 +1,21 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, Inject } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { InMemoryOAuthModel } from './auth.model';
+import { InMemoryAuthRepository } from './in-memory-auth.repository';
 import type { OAuthClient, OAuthUser } from '@oauth/oauth';
+import { AUTH_REPOSITORY } from '@oauth/oauth';
 
 interface RegisterClientDto {
   name: string;
   grants?: string[];
   redirectUris?: string[];
   scopes?: string[];
+  audiences?: string[];
   userId?: string;
 }
 
 @Injectable()
 export class AuthExampleService {
-  constructor(private readonly model: InMemoryOAuthModel) {
+  constructor(@Inject(AUTH_REPOSITORY) private readonly model: InMemoryAuthRepository) {
     this.seed();
   }
 
@@ -25,6 +27,7 @@ export class AuthExampleService {
       clientSecret,
       grants: dto.grants ?? ['client_credentials', 'password', 'refresh_token'],
       redirectUris: dto.redirectUris ?? [],
+      audiences: dto.audiences ?? ['umoja-clients'],
       scope: dto.scopes,
       userId: dto.userId,
     };

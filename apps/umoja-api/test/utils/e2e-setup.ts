@@ -8,10 +8,11 @@ export interface E2EContext {
   app: INestApplication;
   server: any;
   apiKey: string;
-  createClient: (extra?: { userId?: string; grants?: string[]; scopes?: string[] }) => Promise<{
+  createClient: (extra?: { userId?: string; grants?: string[]; scopes?: string[]; audiences?: string[] }) => Promise<{
     clientId: string;
     clientSecret: string;
     grants: string[];
+    audiences?: string[];
   }>;
   createUser: (username: string, password: string, scopes?: string[]) => Promise<void>;
 }
@@ -28,7 +29,7 @@ export async function bootstrapE2E(): Promise<E2EContext> {
   const server = app.getHttpServer();
   const apiKey = process.env.API_KEY;
 
-  const createClient = async (extra?: { userId?: string; grants?: string[]; scopes?: string[] }) => {
+  const createClient = async (extra?: { userId?: string; grants?: string[]; scopes?: string[]; audiences?: string[] }) => {
     const res = await request(server)
       .post('/auth-demo/clients')
       .set('x-api-key', apiKey ?? 'changeme')
@@ -37,9 +38,10 @@ export async function bootstrapE2E(): Promise<E2EContext> {
         grants: extra?.grants ?? ['password', 'client_credentials', 'refresh_token'],
         userId: extra?.userId,
         scopes: extra?.scopes,
+        audiences: extra?.audiences,
       })
       .expect(201);
-    return res.body as { clientId: string; clientSecret: string; grants: string[] };
+    return res.body as { clientId: string; clientSecret: string; grants: string[]; audiences?: string[] };
   };
 
   const createUser = async (username: string, password: string, scopes: string[] = ['read']) => {

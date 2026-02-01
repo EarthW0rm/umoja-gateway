@@ -1,18 +1,7 @@
 import { randomBytes } from 'crypto';
 import { Injectable } from '@nestjs/common';
-import type {
-  OAuthClient,
-  OAuthToken,
-  OAuthUser,
-  RefreshToken,
-  AuthorizationCode,
-} from '@oauth/oauth';
-import type {
-  ClientCredentialsModel,
-  PasswordModel,
-  RefreshTokenModel,
-  Falsey,
-} from '@oauth/oauth';
+import type { OAuthClient, OAuthToken, OAuthUser, RefreshToken, AuthorizationCode, Falsey } from '@oauth/oauth';
+import type { AuthRepository } from '@oauth/oauth';
 
 type StoredToken = OAuthToken & { refreshTokenExpiresAt?: Date };
 
@@ -21,9 +10,7 @@ type StoredToken = OAuthToken & { refreshTokenExpiresAt?: Date };
  * Supports password, client_credentials and refresh_token grants.
  */
 @Injectable()
-export class InMemoryOAuthModel
-  implements PasswordModel, ClientCredentialsModel, RefreshTokenModel
-{
+export class InMemoryAuthRepository implements AuthRepository {
   private clients = new Map<string, OAuthClient>();
   private users = new Map<string, OAuthUser>();
   private accessTokens = new Map<string, StoredToken>();
@@ -139,4 +126,21 @@ export class InMemoryOAuthModel
     this.users.set(String(user.id ?? user.username), user);
     return user;
   }
+
+  async getAudiences(client: OAuthClient, user: OAuthUser): Promise<string[] | string | null> {
+    const fromClient = normalizeAudience((client as any).audiences);
+    const fromUser = normalizeAudience((user as any).audiences);
+    const combined = Array.from(new Set([...fromClient, ...fromUser]));
+    if (combined.length > 0) {
+      return combined;
+    }
+    return ['umoja-clients'];
+  }
+}
+
+function normalizeAudience(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map((v) => String(v));
+  if (typeof value === 'string') return [value];
+  return [];
 }

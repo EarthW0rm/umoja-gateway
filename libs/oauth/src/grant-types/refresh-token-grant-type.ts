@@ -1,3 +1,4 @@
+import { Inject, Injectable } from '@nestjs/common';
 import { isFormat } from '../utils/formats.util';
 import {
   InvalidArgumentException,
@@ -6,33 +7,42 @@ import {
   InvalidScopeException,
   ServerException,
 } from '../exceptions';
-import type { OAuthClient, OAuthToken, OAuthUser, RefreshToken } from '../interfaces';
+import type { OAuthClient, OAuthToken, OAuthUser, RefreshToken, ServerOptions } from '../interfaces';
+import type { AuthRepository } from '../interfaces/auth-repository.interface';
 import { AbstractGrantType } from './abstract-grant-type';
+import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from '../config/oauth.tokens';
+import { resolveTokenOptions } from '../utils';
 
+@Injectable()
 export class RefreshTokenGrantType extends AbstractGrantType {
-  constructor(options: {
-    accessTokenLifetime: number;
-    model: Record<string, any>;
-    refreshTokenLifetime?: number;
-    alwaysIssueNewRefreshToken?: boolean;
-  }) {
-    if (!options.model) {
-      throw new InvalidArgumentException('Missing parameter: `model`');
-    }
+  constructor(
+    @Inject(OAUTH2_SERVER_OPTIONS)
+    options: ServerOptions,
+    @Inject(AUTH_REPOSITORY) repository: AuthRepository,
+  ) {
+    const tokenOptions = resolveTokenOptions(options);
+    const accessTokenLifetime = tokenOptions.accessTokenLifetime ?? 60 * 60;
+    const refreshTokenLifetime = tokenOptions.refreshTokenLifetime ?? 60 * 60 * 24 * 14;
 
-    if (!options.model.getRefreshToken) {
+    if (!repository.getRefreshToken) {
       throw new InvalidArgumentException('Invalid argument: model does not implement `getRefreshToken()`');
     }
 
-    if (!options.model.revokeToken) {
+    if (!repository.revokeToken) {
       throw new InvalidArgumentException('Invalid argument: model does not implement `revokeToken()`');
     }
 
-    if (!options.model.saveToken) {
+    if (!repository.saveToken) {
       throw new InvalidArgumentException('Invalid argument: model does not implement `saveToken()`');
     }
 
-    super(options);
+    super({
+      accessTokenLifetime,
+      model: repository as Record<string, any>,
+      refreshTokenLifetime,
+      alwaysIssueNewRefreshToken: tokenOptions.alwaysIssueNewRefreshToken,
+      jwtOptions: tokenOptions.jwt,
+    });
   }
 
   async handle(request: { body: Record<string, unknown> }, client: OAuthClient) {

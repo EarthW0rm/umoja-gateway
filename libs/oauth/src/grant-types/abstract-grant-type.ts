@@ -1,19 +1,21 @@
 import { InvalidArgumentException, InvalidScopeException } from '../exceptions';
-import { generateRandomToken } from '../utils/token.util';
+import { generateRandomToken, buildAccessTokenPayload, signAccessTokenJwt } from '../utils';
 import { parseScope } from '../utils/scope.util';
-import type { OAuthClient, OAuthUser } from '../interfaces';
+import type { JwtTokenOptions, OAuthClient, OAuthUser } from '../interfaces';
 
 export abstract class AbstractGrantType {
   protected accessTokenLifetime: number;
   protected refreshTokenLifetime?: number;
   protected alwaysIssueNewRefreshToken?: boolean;
   protected model: Record<string, any>;
+  protected jwtOptions?: JwtTokenOptions;
 
   constructor(options: {
     accessTokenLifetime: number;
     model: Record<string, any>;
     refreshTokenLifetime?: number;
     alwaysIssueNewRefreshToken?: boolean;
+    jwtOptions?: JwtTokenOptions;
   }) {
     if (!options.accessTokenLifetime) {
       throw new InvalidArgumentException('Missing parameter: `accessTokenLifetime`');
@@ -27,9 +29,20 @@ export abstract class AbstractGrantType {
     this.model = options.model;
     this.refreshTokenLifetime = options.refreshTokenLifetime;
     this.alwaysIssueNewRefreshToken = options.alwaysIssueNewRefreshToken;
+    this.jwtOptions = options.jwtOptions;
   }
 
   async generateAccessToken(client: OAuthClient, user: OAuthUser, scope?: string[]): Promise<string> {
+    if (this.jwtOptions && (this.jwtOptions.privateKey || this.jwtOptions.secret)) {
+      const payload = buildAccessTokenPayload({
+        client,
+        user,
+        scope,
+      });
+      const resolvedAudience = await this.resolveAudience(client, user, scope);
+      return signAccessTokenJwt(payload, { ...this.jwtOptions, audience: resolvedAudience }, this.accessTokenLifetime);
+    }
+
     if (this.model.generateAccessToken) {
       return this.model.generateAccessToken(client, user, scope);
     }
@@ -68,4 +81,19 @@ export abstract class AbstractGrantType {
 
     return scope;
   }
+
+  private async resolveAudience(client: OAuthClient, user: OAuthUser, scope?: string[]) {
+    const audienceFromRepo = await this.model.getAudiences?.(client, user, scope);
+    if (audienceFromRepo) {
+      return normalizeAudience(audienceFromRepo);
+    }
+    if (this.jwtOptions?.audience) {
+      return normalizeAudience(this.jwtOptions.audience);
+    }
+    return undefined;
+  }
+}
+
+function normalizeAudience(aud: string | string[]) {
+  return Array.isArray(aud) ? aud : [aud];
 }

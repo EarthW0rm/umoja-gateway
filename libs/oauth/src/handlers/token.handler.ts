@@ -1,3 +1,4 @@
+import { Inject, Injectable } from '@nestjs/common';
 import { isFormat } from '../utils/formats.util';
 import {
   InvalidArgumentException,
@@ -10,8 +11,9 @@ import {
 import { UmojaException } from '@core/core';
 import { TokenModel } from '../models/token.model';
 import { BearerTokenType } from '../token-types/bearer-token-type';
-import * as pkce from '../pkce/pkce.util';
-import type { GrantTypeConstructor, OAuthClient, OAuthToken } from '../interfaces';
+import * as pkce from '../utils/pkce/pkce.util';
+import type { GrantTypeConstructor, OAuthClient, OAuthToken, ServerOptions } from '../interfaces';
+import type { AuthRepository } from '../interfaces/auth-repository.interface';
 import { parseBasicAuth } from '../utils/basic-auth.util';
 import {
   AuthorizationCodeGrantType,
@@ -21,55 +23,50 @@ import {
 } from '../grant-types';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { typeIs } from '../utils';
+import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from '../config/oauth.tokens';
+import { resolveTokenOptions } from '../utils';
 
-const grantTypes: Record<string, GrantTypeConstructor> = {
-  authorization_code: AuthorizationCodeGrantType,
-  client_credentials: ClientCredentialsGrantType,
-  password: PasswordGrantType,
-  refresh_token: RefreshTokenGrantType,
-};
+type GrantTypeImpl = { handle: (request: any, client: any) => Promise<any> } | GrantTypeConstructor;
 
+@Injectable()
 export class TokenHandler {
   private accessTokenLifetime: number;
-  private grantTypes: Record<string, GrantTypeConstructor>;
-  private model: Record<string, any>;
+  private grantTypes: Record<string, GrantTypeImpl>;
+  private oauthRepository: AuthRepository | Record<string, any>;
   private refreshTokenLifetime: number;
   private allowExtendedTokenAttributes?: boolean;
   private requireClientAuthentication: Record<string, boolean>;
   private alwaysIssueNewRefreshToken: boolean;
 
-  constructor(options: {
-    accessTokenLifetime: number;
-    refreshTokenLifetime: number;
-    model: Record<string, any>;
-    allowExtendedTokenAttributes?: boolean;
-    requireClientAuthentication?: Record<string, boolean>;
-    alwaysIssueNewRefreshToken?: boolean;
-    extendedGrantTypes?: Record<string, GrantTypeConstructor>;
-  }) {
-    if (!options.accessTokenLifetime) {
-      throw new InvalidArgumentException('Missing parameter: `accessTokenLifetime`');
-    }
+  constructor(
+    @Inject(OAUTH2_SERVER_OPTIONS) options: ServerOptions,
+    authCodeGrant: AuthorizationCodeGrantType,
+    clientCredentialsGrant: ClientCredentialsGrantType,
+    passwordGrant: PasswordGrantType,
+    refreshTokenGrant: RefreshTokenGrantType,
+    @Inject(AUTH_REPOSITORY) oauthRepository: AuthRepository,
+  ) {
+    const tokenOptions = resolveTokenOptions(options);
+    const accessTokenLifetime = tokenOptions.accessTokenLifetime ?? 60 * 60;
+    const refreshTokenLifetime = tokenOptions.refreshTokenLifetime ?? 60 * 60 * 24 * 14;
 
-    if (!options.model) {
-      throw new InvalidArgumentException('Missing parameter: `model`');
-    }
-
-    if (!options.refreshTokenLifetime) {
-      throw new InvalidArgumentException('Missing parameter: `refreshTokenLifetime`');
-    }
-
-    if (!options.model.getClient) {
+    if (!oauthRepository.getClient) {
       throw new InvalidArgumentException('Invalid argument: model does not implement `getClient()`');
     }
 
-    this.accessTokenLifetime = options.accessTokenLifetime;
-    this.grantTypes = { ...grantTypes, ...(options.extendedGrantTypes ?? {}) };
-    this.model = options.model;
-    this.refreshTokenLifetime = options.refreshTokenLifetime;
-    this.allowExtendedTokenAttributes = options.allowExtendedTokenAttributes;
-    this.requireClientAuthentication = options.requireClientAuthentication ?? {};
-    this.alwaysIssueNewRefreshToken = options.alwaysIssueNewRefreshToken !== false;
+    this.accessTokenLifetime = accessTokenLifetime;
+    this.grantTypes = {
+      authorization_code: authCodeGrant,
+      client_credentials: clientCredentialsGrant,
+      password: passwordGrant,
+      refresh_token: refreshTokenGrant,
+      ...(tokenOptions.extendedGrantTypes ?? {}),
+    } as Record<string, GrantTypeImpl>;
+    this.oauthRepository = oauthRepository;
+    this.refreshTokenLifetime = refreshTokenLifetime;
+    this.allowExtendedTokenAttributes = tokenOptions.allowExtendedTokenAttributes;
+    this.requireClientAuthentication = tokenOptions.requireClientAuthentication ?? {};
+    this.alwaysIssueNewRefreshToken = tokenOptions.alwaysIssueNewRefreshToken !== false;
   }
 
   async handle(request: FastifyRequest, reply: FastifyReply) {
@@ -126,7 +123,10 @@ export class TokenHandler {
     }
 
     try {
-      const client = await this.model.getClient(credentials.clientId, credentials.clientSecret ?? null);
+      const client = await (this.oauthRepository as any).getClient(
+        credentials.clientId,
+        credentials.clientSecret ?? null,
+      );
       if (!client) {
         throw new InvalidClientException('Invalid client: client is invalid');
       }
@@ -207,12 +207,23 @@ export class TokenHandler {
     const refreshTokenLifetime = this.getRefreshTokenLifetime(client);
     const Type = this.grantTypes[grantType];
 
-    return new Type({
-      accessTokenLifetime,
-      model: this.model,
-      refreshTokenLifetime,
-      alwaysIssueNewRefreshToken: this.alwaysIssueNewRefreshToken,
-    }).handle(request, client);
+    if (Type && typeof (Type as any).handle === 'function') {
+      return (Type as any).handle(request, client);
+    }
+
+    if (typeof Type === 'function') {
+      const instance = new (Type as any)({
+        accessTokenLifetime,
+        model: this.oauthRepository,
+        refreshTokenLifetime,
+        alwaysIssueNewRefreshToken: this.alwaysIssueNewRefreshToken,
+      });
+      if (instance?.handle) {
+        return instance.handle(request, client);
+      }
+    }
+
+    throw new ServerException('Server error: unsupported grant type handler');
   }
 
   getAccessTokenLifetime(client: OAuthClient) {

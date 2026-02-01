@@ -1,5 +1,5 @@
-import { base64URLEncode } from '../utils/string.util';
-import { createHash } from '../utils/crypto.util';
+import { base64URLEncode } from '../string.util';
+import { createHash } from '../crypto.util';
 
 const codeChallengeRegexp = /^([a-zA-Z0-9.\-_~]){43,128}$/;
 

@@ -1,12 +1,18 @@
 import { DynamicModule, Module, Provider, ModuleMetadata } from '@nestjs/common';
 import { OauthService } from './oauth.service';
 import { OauthController } from './oauth.controller';
-import { OAUTH2_SERVER_OPTIONS } from './config/oauth.tokens';
+import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from './config/oauth.tokens';
 import type { ServerOptions } from './interfaces';
 import { AuthenticateHandler } from './handlers/authenticate.handler';
 import { AuthorizeHandler } from './handlers/authorize.handler';
 import { TokenHandler } from './handlers/token.handler';
 import { OAuthGuard } from './oauth.guard';
+import {
+  AuthorizationCodeGrantType,
+  ClientCredentialsGrantType,
+  PasswordGrantType,
+  RefreshTokenGrantType,
+} from './grant-types';
 
 export interface OauthModuleOptions extends ServerOptions {
   includeControllers?: boolean;
@@ -30,40 +36,13 @@ export class OauthModule {
 
     const providers = [
       optionsProvider,
-      {
-        provide: AuthenticateHandler,
-        useFactory: (opts: ServerOptions) =>
-          new AuthenticateHandler({
-            addAcceptedScopesHeader: true,
-            addAuthorizedScopesHeader: true,
-            allowBearerTokensInQueryString: false,
-            ...opts,
-          }),
-        inject: [OAUTH2_SERVER_OPTIONS],
-      },
-      {
-        provide: AuthorizeHandler,
-        useFactory: (opts: ServerOptions) =>
-          new AuthorizeHandler({
-            allowEmptyState: false,
-            authorizationCodeLifetime: 5 * 60,
-            ...opts,
-          }),
-        inject: [OAUTH2_SERVER_OPTIONS],
-      },
-      {
-        provide: TokenHandler,
-        useFactory: (opts: ServerOptions) =>
-          new TokenHandler({
-            accessTokenLifetime: 60 * 60,
-            refreshTokenLifetime: 60 * 60 * 24 * 14,
-            allowExtendedTokenAttributes: false,
-            requireClientAuthentication: {},
-            alwaysIssueNewRefreshToken: true,
-            ...opts,
-          }),
-        inject: [OAUTH2_SERVER_OPTIONS],
-      },
+      AuthenticateHandler,
+      AuthorizeHandler,
+      AuthorizationCodeGrantType,
+      ClientCredentialsGrantType,
+      PasswordGrantType,
+      RefreshTokenGrantType,
+      TokenHandler,
       OauthService,
       OAuthGuard,
     ];
@@ -91,40 +70,13 @@ export class OauthModule {
 
     const providers: Provider[] = [
       optionsProvider,
-      {
-        provide: AuthenticateHandler,
-        useFactory: (opts: ServerOptions) =>
-          new AuthenticateHandler({
-            addAcceptedScopesHeader: true,
-            addAuthorizedScopesHeader: true,
-            allowBearerTokensInQueryString: false,
-            ...opts,
-          }),
-        inject: [OAUTH2_SERVER_OPTIONS],
-      },
-      {
-        provide: AuthorizeHandler,
-        useFactory: (opts: ServerOptions) =>
-          new AuthorizeHandler({
-            allowEmptyState: false,
-            authorizationCodeLifetime: 5 * 60,
-            ...opts,
-          }),
-        inject: [OAUTH2_SERVER_OPTIONS],
-      },
-      {
-        provide: TokenHandler,
-        useFactory: (opts: ServerOptions) =>
-          new TokenHandler({
-            accessTokenLifetime: 60 * 60,
-            refreshTokenLifetime: 60 * 60 * 24 * 14,
-            allowExtendedTokenAttributes: false,
-            requireClientAuthentication: {},
-            alwaysIssueNewRefreshToken: true,
-            ...opts,
-          }),
-        inject: [OAUTH2_SERVER_OPTIONS],
-      },
+      AuthenticateHandler,
+      AuthorizeHandler,
+      AuthorizationCodeGrantType,
+      ClientCredentialsGrantType,
+      PasswordGrantType,
+      RefreshTokenGrantType,
+      TokenHandler,
       OauthService,
       OAuthGuard,
     ];

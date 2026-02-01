@@ -1,8 +1,15 @@
 import { Module } from '@nestjs/common';
-import { InMemoryOAuthModel } from './auth.model';
+import { InMemoryAuthRepository } from './in-memory-auth.repository';
+import { AUTH_REPOSITORY } from '@oauth/oauth';
 
 @Module({
-  providers: [InMemoryOAuthModel],
-  exports: [InMemoryOAuthModel],
+  providers: [
+    InMemoryAuthRepository,
+    {
+      provide: AUTH_REPOSITORY,
+      useExisting: InMemoryAuthRepository,
+    },
+  ],
+  exports: [AUTH_REPOSITORY],
 })
 export class AuthModelModule {}

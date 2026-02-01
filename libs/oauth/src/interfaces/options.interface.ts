@@ -1,3 +1,5 @@
+import type { FastifyReply, FastifyRequest } from 'fastify';
+import type { Algorithm } from 'jsonwebtoken';
 import type {
   AuthorizationCodeModel,
   ClientCredentialsModel,
@@ -7,7 +9,6 @@ import type {
 } from './model.interfaces';
 import type { GrantTypeConstructor } from './base.types';
 import type { OAuthUser } from './user.interface';
-import type { FastifyReply, FastifyRequest } from 'fastify';
 
 export interface AuthenticateOptions {
   scope?: string[];
@@ -29,13 +30,20 @@ export interface TokenOptions {
   requireClientAuthentication?: Record<string, boolean>;
   alwaysIssueNewRefreshToken?: boolean;
   extendedGrantTypes?: Record<string, GrantTypeConstructor>;
+  jwt?: JwtTokenOptions;
+}
+
+export interface JwtTokenOptions {
+  algorithm?: Algorithm;
+  issuer?: string;
+  audience?: string | string[];
+  secret?: string;
+  privateKey?: string;
+  publicKey?: string;
+  keyId?: string;
+  clockToleranceSeconds?: number;
 }
 
 export interface ServerOptions extends AuthenticateOptions, AuthorizeOptions, TokenOptions {
-  model:
-    | AuthorizationCodeModel
-    | ClientCredentialsModel
-    | RefreshTokenModel
-    | PasswordModel
-    | ExtensionModel;
+  token?: TokenOptions;
 }

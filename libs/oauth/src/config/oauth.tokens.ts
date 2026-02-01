@@ -1,1 +1,2 @@
 export const OAUTH2_SERVER_OPTIONS = Symbol('OAUTH2_SERVER_OPTIONS');
+export const AUTH_REPOSITORY = Symbol('AUTH_REPOSITORY');
