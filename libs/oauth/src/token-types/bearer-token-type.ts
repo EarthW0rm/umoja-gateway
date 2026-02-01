@@ -1,12 +1,39 @@
 import { InvalidArgumentException } from '../exceptions';
 
+/**
+ * Output model for serializing bearer token responses.
+ */
 export class BearerTokenType {
+  /**
+   * Access token string to return.
+   */
   accessToken: string;
+  /**
+   * Lifetime of the access token in seconds.
+   */
   accessTokenLifetime?: number;
+  /**
+   * Refresh token string when issued.
+   */
   refreshToken?: string;
+  /**
+   * Authorized scopes.
+   */
   scope?: string[];
+  /**
+   * Extra attributes to be appended to the response.
+   */
   customAttributes?: Record<string, unknown>;
 
+  /**
+   * Creates a bearer token type instance.
+   * @param accessToken Input payload representing the access token.
+   * @param accessTokenLifetime Lifetime in seconds.
+   * @param refreshToken Optional refresh token string.
+   * @param scope Optional scope array.
+   * @param customAttributes Optional extra attributes to return.
+   * @throws {InvalidArgumentException} When accessToken is missing.
+   */
   constructor(
     accessToken: string,
     accessTokenLifetime?: number,
@@ -28,6 +55,10 @@ export class BearerTokenType {
     }
   }
 
+  /**
+   * Serializes the token payload following OAuth bearer token response format.
+   * @returns Plain object ready to send in HTTP response.
+   */
   valueOf(): Record<string, unknown> {
     const object: Record<string, unknown> = {
       access_token: this.accessToken,

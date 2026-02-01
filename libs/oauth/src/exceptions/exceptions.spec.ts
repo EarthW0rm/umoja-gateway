@@ -42,7 +42,7 @@ describe('OAuth exceptions', () => {
 
   it('preserves inner exception', () => {
     const inner = new Error('Inner');
-    const error = new InvalidRequestException(inner);
+    const error = new InvalidRequestException(inner.message, inner);
     expect(error.inner).toBe(inner);
   });
 });

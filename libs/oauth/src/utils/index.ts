@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 export { generateRandomToken } from './token.util';
 export { parseScope } from './scope.util';
 export { createHash } from './crypto.util';

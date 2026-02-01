@@ -5,8 +5,17 @@ type AuthRequest = {
   headers?: Record<string, string | string[] | undefined>;
 };
 
+/**
+ * Output model representing parsed Basic authentication credentials.
+ */
 export type BasicAuthCredentials = {
+  /**
+   * Username extracted from the header.
+   */
   name: string;
+  /**
+   * Password extracted from the header.
+   */
   pass: string;
 };
 
@@ -27,6 +36,11 @@ function getAuthorization(request: AuthRequest): string | undefined {
   return header;
 }
 
+/**
+ * Parses a Basic authorization header into credentials.
+ * @param value Input payload representing the Authorization header value.
+ * @returns Parsed credentials or undefined when missing/invalid.
+ */
 export function parseBasicAuthHeader(value: string | undefined): BasicAuthCredentials | undefined {
   if (typeof value !== 'string') {
     return undefined;
@@ -45,6 +59,12 @@ export function parseBasicAuthHeader(value: string | undefined): BasicAuthCreden
   return { name: userPass[1], pass: userPass[2] };
 }
 
+/**
+ * Parses Basic authentication credentials from a request object.
+ * @param request Input payload containing headers.
+ * @returns Parsed credentials or undefined when not present.
+ * @throws {TypeError} When request structure is invalid.
+ */
 export function parseBasicAuth(request: AuthRequest): BasicAuthCredentials | undefined {
   if (!request) {
     throw new TypeError('argument req is required');

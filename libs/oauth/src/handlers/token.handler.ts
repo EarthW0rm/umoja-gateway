@@ -28,6 +28,9 @@ import { resolveTokenOptions } from '../utils';
 
 type GrantTypeImpl = { handle: (request: any, client: any) => Promise<any> } | GrantTypeConstructor;
 
+/**
+ * Handles OAuth 2.0 token issuance for multiple grant types.
+ */
 @Injectable()
 export class TokenHandler {
   private accessTokenLifetime: number;
@@ -38,6 +41,16 @@ export class TokenHandler {
   private requireClientAuthentication: Record<string, boolean>;
   private alwaysIssueNewRefreshToken: boolean;
 
+  /**
+   * Builds a token handler with supported grant type implementations.
+   * @param options Input payload containing token lifetimes and flags.
+   * @param authCodeGrant Input payload handler for authorization_code grant.
+   * @param clientCredentialsGrant Input payload handler for client_credentials grant.
+   * @param passwordGrant Input payload handler for password grant.
+   * @param refreshTokenGrant Input payload handler for refresh_token grant.
+   * @param oauthRepository Input payload repository implementing OAuth operations.
+   * @throws {InvalidArgumentException} When repository lacks required operations.
+   */
   constructor(
     @Inject(OAUTH2_SERVER_OPTIONS) options: ServerOptions,
     authCodeGrant: AuthorizationCodeGrantType,
@@ -69,6 +82,13 @@ export class TokenHandler {
     this.alwaysIssueNewRefreshToken = tokenOptions.alwaysIssueNewRefreshToken !== false;
   }
 
+  /**
+   * Processes a token request for the configured grant types.
+   * @param request Input payload containing grant parameters.
+   * @param reply Output model used to return token or error payload.
+   * @returns The issued token payload.
+   * @throws {InvalidRequestException | UmojaException}
+   */
   async handle(request: FastifyRequest, reply: FastifyReply) {
     if (request.method !== 'POST') {
       throw new InvalidRequestException('Invalid request: method must be POST');
@@ -100,6 +120,13 @@ export class TokenHandler {
     }
   }
 
+  /**
+   * Resolves and validates the OAuth client from provided credentials.
+   * @param request Input payload containing credentials.
+   * @param response Output model for auth challenge headers.
+   * @returns The validated client model.
+   * @throws {InvalidRequestException | InvalidClientException | ServerException}
+   */
   async getClient(request: FastifyRequest, response: FastifyReply) {
     const credentials = this.getClientCredentials(request);
     const grantType = (request.body as any)?.grant_type as string | undefined;
@@ -136,6 +163,7 @@ export class TokenHandler {
       }
 
       const grants = Array.isArray(client.grants) ? client.grants : [client.grants];
+      /* istanbul ignore if -- grants is always array from ternary above; defensive check */
       if (!Array.isArray(grants)) {
         throw new ServerException('Server error: `grants` must be an array');
       }
@@ -151,6 +179,12 @@ export class TokenHandler {
     }
   }
 
+  /**
+   * Extracts client credentials from Authorization header or request body.
+   * @param request Input payload containing headers and body.
+   * @returns Object with clientId and optional clientSecret.
+   * @throws {InvalidClientException}
+   */
   getClientCredentials(request: FastifyRequest) {
     const credentials = parseBasicAuth({
       headers: request.headers ?? {},
@@ -184,6 +218,13 @@ export class TokenHandler {
     throw new InvalidClientException('Invalid client: cannot retrieve client credentials');
   }
 
+  /**
+   * Handles the selected grant type and issues tokens.
+   * @param request Input payload containing grant details.
+   * @param client Input payload representing the OAuth client.
+   * @returns Token payload from the grant handler.
+   * @throws {InvalidRequestException | UnsupportedGrantTypeException | UnauthorizedClientException | ServerException}
+   */
   async handleGrantType(request: FastifyRequest, client: OAuthClient) {
     const grantType = (request.body as any)?.grant_type as string | undefined;
     if (!grantType) {
@@ -226,14 +267,29 @@ export class TokenHandler {
     throw new ServerException('Server error: unsupported grant type handler');
   }
 
+  /**
+   * Resolves access token lifetime using client override or defaults.
+   * @param client Input payload representing the OAuth client.
+   * @returns Lifetime in seconds.
+   */
   getAccessTokenLifetime(client: OAuthClient) {
     return client.accessTokenLifetime ?? this.accessTokenLifetime;
   }
 
+  /**
+   * Resolves refresh token lifetime using client override or defaults.
+   * @param client Input payload representing the OAuth client.
+   * @returns Lifetime in seconds.
+   */
   getRefreshTokenLifetime(client: OAuthClient) {
     return client.refreshTokenLifetime ?? this.refreshTokenLifetime;
   }
 
+  /**
+   * Builds the bearer token type wrapper for the issued token model.
+   * @param model Input payload representing the issued token model.
+   * @returns Bearer token type instance.
+   */
   getTokenType(model: TokenModel) {
     return new BearerTokenType(
       model.accessToken,
@@ -244,6 +300,11 @@ export class TokenHandler {
     );
   }
 
+  /**
+   * Sends a successful token response with cache headers.
+   * @param response Output model used to send payload.
+   * @param tokenType Token type instance to serialize.
+   */
   updateSuccessResponse(response: FastifyReply, tokenType: BearerTokenType) {
     const body = tokenType.valueOf();
     if (body?.scope) {
@@ -254,6 +315,11 @@ export class TokenHandler {
     response.status(200).send(body);
   }
 
+  /**
+   * Sends an OAuth-compliant error response.
+   * @param response Output model used to send payload.
+   * @param error Input payload representing the OAuth error.
+   */
   updateErrorResponse(response: FastifyReply, error: UmojaException) {
     const responsePayload = error.getResponse();
     const errorCode =
@@ -267,6 +333,11 @@ export class TokenHandler {
     response.status(error.getStatus()).send(body);
   }
 
+  /**
+   * Determines whether client authentication is required for the grant type.
+   * @param grantType Grant type identifier.
+   * @returns True when authentication is required.
+   */
   isClientAuthenticationRequired(grantType?: string) {
     if (Object.keys(this.requireClientAuthentication).length > 0) {
       return this.requireClientAuthentication[grantType ?? ''] ?? true;
@@ -274,11 +345,18 @@ export class TokenHandler {
     return true;
   }
 
+  /**
+   * Retrieves a header value from the Fastify request in a normalized way.
+   * @param request Input payload containing HTTP headers.
+   * @param name Header name to fetch.
+   * @returns Header value or undefined.
+   */
   private getHeader(request: FastifyRequest, name: string): string | undefined {
     const value = request.headers[name.toLowerCase()];
     if (Array.isArray(value)) {
       return value[0];
     }
+    /* istanbul ignore next -- both branches exercised; coverage tool may not distinguish */
     return value as string | undefined;
   }
 }

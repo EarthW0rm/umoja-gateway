@@ -16,6 +16,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from '../config/oauth.tokens';
 import { resolveTokenOptions, verifyAccessTokenJwt, mapPayloadToOAuthToken } from '../utils';
 
+/**
+ * Validates bearer tokens from incoming requests and enforces configured scopes.
+ */
 @Injectable()
 export class AuthenticateHandler {
   private addAcceptedScopesHeader?: boolean;
@@ -25,6 +28,12 @@ export class AuthenticateHandler {
   private scope?: string[];
   private jwtOptions?: JwtTokenOptions;
 
+  /**
+   * Builds an authenticate handler with scope and audience validation.
+   * @param options Input payload configuring scope, headers, and token options.
+   * @param oauthRepository Input payload repository that provides token operations.
+   * @throws {InvalidArgumentException} When repository lacks required operations.
+   */
   constructor(
     @Inject(OAUTH2_SERVER_OPTIONS)
     options: ServerOptions & {
@@ -53,6 +62,13 @@ export class AuthenticateHandler {
     this.jwtOptions = tokenOptions.jwt;
   }
 
+  /**
+   * Authenticates the request and returns the validated token model.
+   * @param request Input payload containing headers, query, and body.
+   * @param reply Output model used to set authentication headers.
+   * @returns The validated OAuth token.
+   * @throws {UnauthorizedRequestException | InvalidRequestException | InvalidTokenException | InsufficientScopeException | ServerException}
+   */
   async handle(request: FastifyRequest, reply: FastifyReply) {
     try {
       const requestToken = await this.getTokenFromRequest(request);
@@ -85,6 +101,12 @@ export class AuthenticateHandler {
     }
   }
 
+  /**
+   * Extracts a bearer token from request headers, query, or body.
+   * @param request Input payload to inspect.
+   * @returns The raw bearer token value.
+   * @throws {InvalidRequestException | UnauthorizedRequestException}
+   */
   getTokenFromRequest(request: FastifyRequest) {
     const headerToken = this.getHeader(request, 'authorization');
     const queryToken = (request.query as any)?.access_token as string | undefined;
@@ -109,6 +131,12 @@ export class AuthenticateHandler {
     throw new UnauthorizedRequestException('Unauthorized request: no authentication given');
   }
 
+  /**
+   * Reads the bearer token from the Authorization header.
+   * @param request Input payload containing headers.
+   * @returns The bearer token string.
+   * @throws {InvalidRequestException}
+   */
   getTokenFromRequestHeader(request: FastifyRequest) {
     const token = this.getHeader(request, 'authorization');
     const matches = token?.match(/^Bearer ([0-9a-zA-Z-._~+/]+=*)$/);
@@ -120,6 +148,12 @@ export class AuthenticateHandler {
     return matches[1];
   }
 
+  /**
+   * Reads the bearer token from query string when allowed.
+   * @param request Input payload containing query params.
+   * @returns The bearer token string.
+   * @throws {InvalidRequestException}
+   */
   getTokenFromRequestQuery(request: FastifyRequest) {
     if (!this.allowBearerTokensInQueryString) {
       throw new InvalidRequestException('Invalid request: do not send bearer tokens in query URLs');
@@ -128,6 +162,12 @@ export class AuthenticateHandler {
     return (request.query as any)?.access_token as string;
   }
 
+  /**
+   * Reads the bearer token from request body for non-GET requests.
+   * @param request Input payload containing body data.
+   * @returns The bearer token string.
+   * @throws {InvalidRequestException}
+   */
   getTokenFromRequestBody(request: FastifyRequest) {
     if (request.method === 'GET') {
       throw new InvalidRequestException(
@@ -142,6 +182,12 @@ export class AuthenticateHandler {
     return (request.body as any)?.access_token as string;
   }
 
+  /**
+   * Retrieves and optionally verifies an access token using the repository or JWT.
+   * @param token Raw bearer token.
+   * @returns The hydrated OAuth token model.
+   * @throws {InvalidTokenException | ServerException}
+   */
   async getAccessToken(token: string): Promise<OAuthToken> {
     if (this.jwtOptions && (this.jwtOptions.publicKey || this.jwtOptions.secret || this.jwtOptions.privateKey)) {
       try {
@@ -167,6 +213,12 @@ export class AuthenticateHandler {
     return accessToken;
   }
 
+  /**
+   * Ensures the access token has not expired and contains expected fields.
+   * @param accessToken Input payload representing the OAuth token.
+   * @returns The validated OAuth token.
+   * @throws {ServerException | InvalidTokenException}
+   */
   validateAccessToken(accessToken: OAuthToken) {
     if (!(accessToken.accessTokenExpiresAt instanceof Date)) {
       throw new ServerException('Server error: `accessTokenExpiresAt` must be a Date instance');
@@ -179,6 +231,11 @@ export class AuthenticateHandler {
     return accessToken;
   }
 
+  /**
+   * Confirms the token scope satisfies the configured requirements.
+   * @param accessToken Input payload representing the OAuth token.
+   * @throws {InsufficientScopeException}
+   */
   async verifyScope(accessToken: OAuthToken) {
     const scope = await this.oauthRepository.verifyScope?.(accessToken, this.scope);
 
@@ -187,6 +244,11 @@ export class AuthenticateHandler {
     }
   }
 
+  /**
+   * Adds OAuth scope headers to the reply when configured.
+   * @param reply Output model to mutate headers.
+   * @param accessToken Input payload representing the OAuth token.
+   */
   updateResponse(reply: FastifyReply, accessToken: OAuthToken) {
     if (accessToken.scope == null) {
       return;
@@ -201,6 +263,12 @@ export class AuthenticateHandler {
     }
   }
 
+  /**
+   * Safely extracts a header value from the Fastify request.
+   * @param request Input payload containing the HTTP headers.
+   * @param name Header name to resolve.
+   * @returns Header value or undefined.
+   */
   private getHeader(request: FastifyRequest, name: string): string | undefined {
     const value = request.headers[name.toLowerCase()];
     if (Array.isArray(value)) {
@@ -209,6 +277,11 @@ export class AuthenticateHandler {
     return value as string | undefined;
   }
 
+  /**
+   * Validates JWT audience against repository-provided audiences.
+   * @param accessToken Input payload representing the OAuth token.
+   * @throws {InvalidTokenException}
+   */
   private async verifyAudience(accessToken: OAuthToken) {
     const repo = this.oauthRepository as AuthRepository & {
       getAudiences?: (client: any, user: any, scope?: string[]) => Promise<string[] | string | null>;

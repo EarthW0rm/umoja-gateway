@@ -26,6 +26,9 @@ const responseTypes = {
   code: CodeResponseType,
 };
 
+/**
+ * Handles OAuth 2.0 authorization code flows including PKCE validation.
+ */
 @Injectable()
 export class AuthorizeHandler {
   private allowEmptyState?: boolean;
@@ -33,6 +36,13 @@ export class AuthorizeHandler {
   private authorizationCodeLifetime: number;
   private oauthRepository: AuthRepository | Record<string, any>;
 
+  /**
+   * Builds an authorize handler capable of issuing authorization codes.
+   * @param options Input payload with handler hooks and timing options.
+   * @param authenticateHandler Input payload delegating user authentication.
+   * @param oauthRepository Input payload repository implementing OAuth flows.
+   * @throws {InvalidArgumentException} When required operations are missing.
+   */
   constructor(
     @Inject(OAUTH2_SERVER_OPTIONS)
     options: ServerOptions & {
@@ -66,6 +76,13 @@ export class AuthorizeHandler {
     this.oauthRepository = model;
   }
 
+  /**
+   * Orchestrates the authorization code issuance and redirect response.
+   * @param request Input payload containing query/body parameters.
+   * @param response Output model used for redirects.
+   * @returns The persisted authorization code record.
+   * @throws {UmojaException} When validation or persistence fails.
+   */
   async handle(request: FastifyRequest, response: FastifyReply) {
     const expiresAt = this.getAuthorizationCodeLifetime();
     const client = await this.getClient(request);
@@ -118,6 +135,13 @@ export class AuthorizeHandler {
     }
   }
 
+  /**
+   * Generates an authorization code using repository hook or a random token.
+   * @param client Input payload representing the OAuth client.
+   * @param user Input payload representing the resource owner.
+   * @param scope Optional scope array.
+   * @returns The generated code string.
+   */
   async generateAuthorizationCode(client: OAuthClient, user: OAuthUser, scope?: string[]) {
     if ((this.oauthRepository as any).generateAuthorizationCode) {
       return (this.oauthRepository as any).generateAuthorizationCode(client, user, scope);
@@ -125,12 +149,22 @@ export class AuthorizeHandler {
     return generateRandomToken();
   }
 
+  /**
+   * Computes the expiration timestamp for a new authorization code.
+   * @returns Expiration date for the code.
+   */
   getAuthorizationCodeLifetime() {
     const expires = new Date();
     expires.setSeconds(expires.getSeconds() + this.authorizationCodeLifetime);
     return expires;
   }
 
+  /**
+   * Resolves and validates the OAuth client from the request payload.
+   * @param request Input payload containing client identifiers.
+   * @returns The validated OAuth client.
+   * @throws {InvalidRequestException | InvalidClientException | UnauthorizedClientException}
+   */
   async getClient(request: FastifyRequest): Promise<OAuthClient> {
     const clientId =
       (request.body as any)?.client_id as string | undefined ?? (request.query as any)?.client_id;
@@ -176,6 +210,14 @@ export class AuthorizeHandler {
     return client;
   }
 
+  /**
+   * Validates the requested scope using repository hook when available.
+   * @param user Input payload representing the resource owner.
+   * @param client Input payload representing the OAuth client.
+   * @param scope Parsed scope array.
+   * @returns The validated scope array.
+   * @throws {InvalidScopeException}
+   */
   async validateScope(user: OAuthUser, client: OAuthClient, scope?: string[]) {
     if ((this.oauthRepository as any).validateScope) {
       const validatedScope = await (this.oauthRepository as any).validateScope(user, client, scope);
@@ -188,11 +230,22 @@ export class AuthorizeHandler {
     return scope;
   }
 
+  /**
+   * Parses scope from request body or query string.
+   * @param request Input payload containing scope.
+   * @returns Scope as string array or undefined.
+   */
   getScope(request: FastifyRequest) {
     const scope = (request.body as any)?.scope as string | undefined ?? (request.query as any)?.scope;
     return parseScope(scope);
   }
 
+  /**
+   * Extracts and validates the state parameter when required.
+   * @param request Input payload containing state.
+   * @returns The provided state or undefined.
+   * @throws {InvalidRequestException}
+   */
   getState(request: FastifyRequest) {
     const state = (request.body as any)?.state as string | undefined ?? (request.query as any)?.state;
     const stateExists = !!state && state.length > 0;
@@ -206,6 +259,13 @@ export class AuthorizeHandler {
     return state;
   }
 
+  /**
+   * Retrieves the authenticated user using the configured handler.
+   * @param request Input payload with authentication data.
+   * @param response Output model for downstream handlers.
+   * @returns The authenticated user model.
+   * @throws {ServerException}
+   */
   async getUser(request: FastifyRequest, response: FastifyReply): Promise<OAuthUser> {
     const user = await this.authenticateHandler.handle(request, response);
     if (!user) {
@@ -214,6 +274,13 @@ export class AuthorizeHandler {
     return user;
   }
 
+  /**
+   * Resolves the redirect URI from the request or client configuration.
+   * @param request Input payload containing redirect hints.
+   * @param client Input payload representing the OAuth client.
+   * @returns Parsed redirect URI.
+   * @throws {InvalidClientException}
+   */
   getRedirectUri(request: FastifyRequest, client: OAuthClient) {
     const redirectUri =
       (request.body as any)?.redirect_uri as string | undefined ?? (request.query as any)?.redirect_uri;
@@ -225,6 +292,18 @@ export class AuthorizeHandler {
     return parseUrl(resolvedRedirect, true);
   }
 
+  /**
+   * Persists the authorization code using repository operation.
+   * @param authorizationCode Generated code string.
+   * @param expiresAt Expiration date of the code.
+   * @param scope Scope attached to the code.
+   * @param client Input payload representing the OAuth client.
+   * @param redirectUri Redirect URI to enforce.
+   * @param user Input payload representing the resource owner.
+   * @param codeChallenge Optional PKCE code challenge.
+   * @param codeChallengeMethod Optional PKCE method.
+   * @returns Persisted code record.
+   */
   async saveAuthorizationCode(
     authorizationCode: string,
     expiresAt: Date,
@@ -260,6 +339,12 @@ export class AuthorizeHandler {
     return (this.oauthRepository as any).saveAuthorizationCode(code, client, user);
   }
 
+  /**
+   * Validates redirect URI against repository hook or client configuration.
+   * @param redirectUri Redirect URI sent by the client.
+   * @param client Input payload representing the OAuth client.
+   * @returns True when valid, false otherwise.
+   */
   async validateRedirectUri(redirectUri: string, client: OAuthClient) {
     if ((this.oauthRepository as any).validateRedirectUri) {
       return (this.oauthRepository as any).validateRedirectUri(redirectUri, client);
@@ -269,6 +354,12 @@ export class AuthorizeHandler {
     return redirectUris.includes(redirectUri);
   }
 
+  /**
+   * Selects the response type handler based on request parameter.
+   * @param request Input payload containing response_type.
+   * @returns The response type class.
+   * @throws {InvalidRequestException | UnsupportedResponseTypeException}
+   */
   getResponseType(request: FastifyRequest) {
     const responseType =
       (request.body as any)?.response_type as string | undefined ?? (request.query as any)?.response_type;
@@ -283,10 +374,23 @@ export class AuthorizeHandler {
     return responseTypes[responseType];
   }
 
+  /**
+   * Builds success redirect URI with authorization code params.
+   * @param redirectUri Parsed redirect URI.
+   * @param responseType Response type instance.
+   * @returns Redirect URI string with query params.
+   */
   buildSuccessRedirectUri(redirectUri: UrlWithParsedQuery, responseType: CodeResponseType) {
     return responseType.buildRedirectUri(formatUrl(redirectUri));
   }
 
+  /**
+   * Builds error redirect URI embedding the error details.
+   * @param redirectUri Parsed redirect URI or undefined.
+   * @param error Input payload representing the OAuth error.
+   * @returns Redirect URI with error details.
+   * @throws {UmojaException} When no redirect URI is available.
+   */
   buildErrorRedirectUri(redirectUri: UrlWithParsedQuery | undefined, error: UmojaException) {
     if (!redirectUri) {
       throw error;
@@ -308,6 +412,12 @@ export class AuthorizeHandler {
     return uri;
   }
 
+  /**
+   * Issues the redirect response to the client with optional state.
+   * @param response Output model used to send redirect.
+   * @param redirectUri Redirect target with query params.
+   * @param state Optional state to echo back.
+   */
   updateResponse(response: FastifyReply, redirectUri: UrlWithParsedQuery, state?: string) {
     redirectUri.query = redirectUri.query || {};
     if (state) {
@@ -316,6 +426,11 @@ export class AuthorizeHandler {
     response.redirect(formatUrl(redirectUri));
   }
 
+  /**
+   * Reads the PKCE code challenge from request.
+   * @param request Input payload containing PKCE parameters.
+   * @returns Code challenge or undefined.
+   */
   getCodeChallenge(request: FastifyRequest) {
     return (
       (request.body as any)?.code_challenge as string | undefined ??
@@ -323,6 +438,12 @@ export class AuthorizeHandler {
     );
   }
 
+  /**
+   * Validates PKCE code challenge method and falls back to plain.
+   * @param request Input payload containing PKCE parameters.
+   * @returns The PKCE transformation method.
+   * @throws {InvalidRequestException}
+   */
   getCodeChallengeMethod(request: FastifyRequest) {
     const algorithm =
       ((request.body as any)?.code_challenge_method as string | undefined) ??

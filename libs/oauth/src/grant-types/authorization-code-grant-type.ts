@@ -13,8 +13,17 @@ import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from '../config/oauth.tokens';
 import type { ServerOptions } from '../interfaces';
 import { resolveTokenOptions } from '../utils';
 
+/**
+ * Implements the authorization_code grant type with PKCE support.
+ */
 @Injectable()
 export class AuthorizationCodeGrantType extends AbstractGrantType {
+  /**
+   * Creates an authorization code grant handler.
+   * @param options Input payload containing token lifetimes.
+   * @param oauthRepository Input payload repository implementing authorization code storage.
+   * @throws {InvalidArgumentException} When repository requirements are not met.
+   */
   constructor(
     @Inject(OAUTH2_SERVER_OPTIONS)
     options: ServerOptions,
@@ -48,6 +57,13 @@ export class AuthorizationCodeGrantType extends AbstractGrantType {
     super(merged);
   }
 
+  /**
+   * Exchanges an authorization code for tokens.
+   * @param request Input payload containing code and optional redirect.
+   * @param client Input payload representing the OAuth client.
+   * @returns Persisted token model.
+   * @throws {InvalidArgumentException | InvalidGrantException | InvalidRequestException | ServerException}
+   */
   async handle(request: { body: Record<string, unknown>; query?: Record<string, string> }, client: OAuthClient) {
     if (!request) {
       throw new InvalidArgumentException('Missing parameter: `request`');
@@ -64,6 +80,13 @@ export class AuthorizationCodeGrantType extends AbstractGrantType {
     return this.saveToken(code.user, client, code.authorizationCode, code.scope);
   }
 
+  /**
+   * Retrieves and validates the authorization code from storage.
+   * @param request Input payload containing code and verifier.
+   * @param client Input payload representing the OAuth client.
+   * @returns The validated authorization code model.
+   * @throws {InvalidRequestException | InvalidGrantException | ServerException}
+   */
   async getAuthorizationCode(
     request: { body: Record<string, unknown> },
     client: OAuthClient,
@@ -133,6 +156,12 @@ export class AuthorizationCodeGrantType extends AbstractGrantType {
     return code;
   }
 
+  /**
+   * Validates redirect URI consistency between request and stored code.
+   * @param request Input payload containing redirect URI.
+   * @param code Input payload representing the authorization code model.
+   * @throws {InvalidRequestException}
+   */
   validateRedirectUri(request: { body: Record<string, unknown>; query?: Record<string, string> }, code: AuthorizationCode) {
     if (!code.redirectUri) {
       return;
@@ -150,6 +179,12 @@ export class AuthorizationCodeGrantType extends AbstractGrantType {
     }
   }
 
+  /**
+   * Revokes the authorization code after it is used.
+   * @param code Input payload representing the authorization code model.
+   * @returns The revoked authorization code model.
+   * @throws {InvalidGrantException}
+   */
   async revokeAuthorizationCode(code: AuthorizationCode) {
     const status = await this.model.revokeAuthorizationCode(code);
     if (!status) {
@@ -158,6 +193,14 @@ export class AuthorizationCodeGrantType extends AbstractGrantType {
     return code;
   }
 
+  /**
+   * Persists access and refresh tokens associated with the code exchange.
+   * @param user Input payload representing the resource owner.
+   * @param client Input payload representing the OAuth client.
+   * @param authorizationCode Authorization code string.
+   * @param requestedScope Requested scope array.
+   * @returns Saved OAuth token model.
+   */
   async saveToken(
     user: OAuthUser,
     client: OAuthClient,

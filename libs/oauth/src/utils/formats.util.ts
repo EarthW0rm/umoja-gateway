@@ -18,22 +18,37 @@ const assertString = (value: unknown) => {
   }
 };
 
+/**
+ * Validation helpers for OAuth string grammar subsets.
+ */
 export const isFormat = {
+  /**
+   * Validates NCHAR as defined by RFC 6749.
+   */
   nchar(value: string) {
     assertString(value);
     return rules.NCHAR.test(value);
   },
 
+  /**
+   * Validates NQCHAR as defined by RFC 6749.
+   */
   nqchar(value: string) {
     assertString(value);
     return rules.NQCHAR.test(value);
   },
 
+  /**
+   * Validates NQSCHAR as defined by RFC 6749.
+   */
   nqschar(value: string) {
     assertString(value);
     return rules.NQSCHAR.test(value);
   },
 
+  /**
+   * Validates Unicode characters excluding CRLF.
+   */
   uchar(value: string) {
     assertString(value);
     if (rules.UNICODECHARNOCRLF.test(value)) {
@@ -43,11 +58,17 @@ export const isFormat = {
     return rules.UNICODECHARNOCRLF_EXTENDED.test(value);
   },
 
+  /**
+   * Validates URI scheme prefix.
+   */
   uri(value: string) {
     assertString(value);
     return rules.URI.test(value);
   },
 
+  /**
+   * Validates VSCHAR printable ASCII characters.
+   */
   vschar(value: string) {
     assertString(value);
     return rules.VSCHAR.test(value);

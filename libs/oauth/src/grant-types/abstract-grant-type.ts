@@ -3,6 +3,9 @@ import { generateRandomToken, buildAccessTokenPayload, signAccessTokenJwt } from
 import { parseScope } from '../utils/scope.util';
 import type { JwtTokenOptions, OAuthClient, OAuthUser } from '../interfaces';
 
+/**
+ * Base grant type with shared token generation utilities.
+ */
 export abstract class AbstractGrantType {
   protected accessTokenLifetime: number;
   protected refreshTokenLifetime?: number;
@@ -10,6 +13,11 @@ export abstract class AbstractGrantType {
   protected model: Record<string, any>;
   protected jwtOptions?: JwtTokenOptions;
 
+  /**
+   * Initializes grant type with required lifetimes and model hooks.
+   * @param options Input payload defining lifetimes and repository hooks.
+   * @throws {InvalidArgumentException} When required options are missing.
+   */
   constructor(options: {
     accessTokenLifetime: number;
     model: Record<string, any>;
@@ -32,6 +40,13 @@ export abstract class AbstractGrantType {
     this.jwtOptions = options.jwtOptions;
   }
 
+  /**
+   * Generates an access token using JWT or repository hook.
+   * @param client Input payload representing the OAuth client.
+   * @param user Input payload representing the resource owner.
+   * @param scope Optional scope array.
+   * @returns Access token string.
+   */
   async generateAccessToken(client: OAuthClient, user: OAuthUser, scope?: string[]): Promise<string> {
     if (this.jwtOptions && (this.jwtOptions.privateKey || this.jwtOptions.secret)) {
       const payload = buildAccessTokenPayload({
@@ -50,6 +65,13 @@ export abstract class AbstractGrantType {
     return generateRandomToken();
   }
 
+  /**
+   * Generates a refresh token using repository hook or random token.
+   * @param client Input payload representing the OAuth client.
+   * @param user Input payload representing the resource owner.
+   * @param scope Optional scope array.
+   * @returns Refresh token string.
+   */
   async generateRefreshToken(client: OAuthClient, user: OAuthUser, scope?: string[]): Promise<string> {
     if (this.model.generateRefreshToken) {
       return this.model.generateRefreshToken(client, user, scope);
@@ -58,18 +80,39 @@ export abstract class AbstractGrantType {
     return generateRandomToken();
   }
 
+  /**
+   * Computes the expiration date for an access token.
+   * @returns Expiration date.
+   */
   getAccessTokenExpiresAt(): Date {
     return new Date(Date.now() + this.accessTokenLifetime * 1000);
   }
 
+  /**
+   * Computes the expiration date for a refresh token.
+   * @returns Expiration date.
+   */
   getRefreshTokenExpiresAt(): Date {
     return new Date(Date.now() + (this.refreshTokenLifetime ?? 0) * 1000);
   }
 
+  /**
+   * Parses scope from the request payload.
+   * @param request Input payload containing optional scope.
+   * @returns Scope as array or undefined.
+   */
   getScope(request: { body?: Record<string, unknown> }): string[] | undefined {
     return parseScope(request.body?.scope as string | undefined);
   }
 
+  /**
+   * Validates scope using repository hook when available.
+   * @param user Input payload representing the resource owner.
+   * @param client Input payload representing the OAuth client.
+   * @param scope Requested scope array.
+   * @returns Validated scope array.
+   * @throws {InvalidScopeException}
+   */
   async validateScope(user: OAuthUser, client: OAuthClient, scope?: string[]) {
     if (this.model.validateScope) {
       const validatedScope = await this.model.validateScope(user, client, scope);
@@ -82,6 +125,13 @@ export abstract class AbstractGrantType {
     return scope;
   }
 
+  /**
+   * Resolves JWT audience from repository or configuration.
+   * @param client Input payload representing the OAuth client.
+   * @param user Input payload representing the resource owner.
+   * @param scope Requested scope array.
+   * @returns Audience array or undefined.
+   */
   private async resolveAudience(client: OAuthClient, user: OAuthUser, scope?: string[]) {
     const audienceFromRepo = await this.model.getAudiences?.(client, user, scope);
     if (audienceFromRepo) {

@@ -12,17 +12,53 @@ const modelAttributes = new Set([
   'user',
 ]);
 
+/**
+ * Output model that normalizes token payloads for responses.
+ */
 export class TokenModel {
+  /**
+   * Issued access token string.
+   */
   accessToken: string;
+  /**
+   * Expiration date of the access token.
+   */
   accessTokenExpiresAt?: Date;
+  /**
+   * Lifetime of the access token in seconds.
+   */
   accessTokenLifetime?: number;
+  /**
+   * Issued refresh token string when applicable.
+   */
   refreshToken?: string;
+  /**
+   * Expiration date of the refresh token.
+   */
   refreshTokenExpiresAt?: Date;
+  /**
+   * Authorized scopes linked to the token.
+   */
   scope?: string[];
+  /**
+   * Client associated with the token.
+   */
   client: OAuthClient;
+  /**
+   * Resource owner associated with the token.
+   */
   user: OAuthUser;
+  /**
+   * Additional attributes copied from the input payload.
+   */
   customAttributes?: Record<string, unknown>;
 
+  /**
+   * Creates a token model from a raw token payload.
+   * @param data Input payload representing the token attributes.
+   * @param options Input payload controlling extended attributes.
+   * @throws {InvalidArgumentException} When required fields are missing or invalid.
+   */
   constructor(
     data: OAuthToken & Record<string, unknown>,
     options: { allowExtendedTokenAttributes?: boolean } = {},

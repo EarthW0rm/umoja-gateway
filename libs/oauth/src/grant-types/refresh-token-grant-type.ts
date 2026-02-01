@@ -13,8 +13,17 @@ import { AbstractGrantType } from './abstract-grant-type';
 import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from '../config/oauth.tokens';
 import { resolveTokenOptions } from '../utils';
 
+/**
+ * Implements the refresh_token grant type for renewing access tokens.
+ */
 @Injectable()
 export class RefreshTokenGrantType extends AbstractGrantType {
+  /**
+   * Creates a refresh token grant handler.
+   * @param options Input payload containing token lifetimes.
+   * @param repository Input payload repository implementing refresh token operations.
+   * @throws {InvalidArgumentException} When repository requirements are not met.
+   */
   constructor(
     @Inject(OAUTH2_SERVER_OPTIONS)
     options: ServerOptions,
@@ -45,6 +54,13 @@ export class RefreshTokenGrantType extends AbstractGrantType {
     });
   }
 
+  /**
+   * Renews tokens using a valid refresh token.
+   * @param request Input payload containing refresh_token and optional scope.
+   * @param client Input payload representing the OAuth client.
+   * @returns Persisted token model.
+   * @throws {InvalidArgumentException | InvalidRequestException | InvalidGrantException | InvalidScopeException}
+   */
   async handle(request: { body: Record<string, unknown> }, client: OAuthClient) {
     if (!request) {
       throw new InvalidArgumentException('Missing parameter: `request`');
@@ -62,6 +78,13 @@ export class RefreshTokenGrantType extends AbstractGrantType {
     return this.saveToken(token.user, client, scope);
   }
 
+  /**
+   * Retrieves and validates the refresh token from storage.
+   * @param request Input payload containing refresh_token.
+   * @param client Input payload representing the OAuth client.
+   * @returns The validated refresh token model.
+   * @throws {InvalidRequestException | InvalidGrantException | ServerException}
+   */
   async getRefreshToken(request: { body: Record<string, unknown> }, client: OAuthClient): Promise<RefreshToken> {
     const refreshTokenValue = request.body.refresh_token as string | undefined;
     if (!refreshTokenValue) {
@@ -100,6 +123,12 @@ export class RefreshTokenGrantType extends AbstractGrantType {
     return token;
   }
 
+  /**
+   * Revokes the provided refresh token when renewal requires replacement.
+   * @param token Input payload representing the refresh token model.
+   * @returns The revoked token model.
+   * @throws {InvalidGrantException}
+   */
   async revokeToken(token: RefreshToken) {
     if (this.alwaysIssueNewRefreshToken === false) {
       return token;
@@ -113,6 +142,13 @@ export class RefreshTokenGrantType extends AbstractGrantType {
     return token;
   }
 
+  /**
+   * Persists new access and refresh tokens derived from the existing refresh token.
+   * @param user Input payload representing the resource owner.
+   * @param client Input payload representing the OAuth client.
+   * @param scope Scope to attach to the renewed token.
+   * @returns Saved OAuth token model.
+   */
   async saveToken(user: OAuthUser, client: OAuthClient, scope?: string[]): Promise<OAuthToken> {
     const accessToken = await this.generateAccessToken(client, user, scope);
     const refreshToken = await this.generateRefreshToken(client, user, scope);
@@ -134,6 +170,13 @@ export class RefreshTokenGrantType extends AbstractGrantType {
     return this.model.saveToken(token, client, user);
   }
 
+  /**
+   * Validates requested scope against the original token scope.
+   * @param request Input payload containing scope.
+   * @param token Input payload representing the refresh token model.
+   * @returns The scope to use for renewed tokens.
+   * @throws {InvalidScopeException}
+   */
   getScopeWithToken(request: { body: Record<string, unknown> }, token: RefreshToken) {
     const requestedScope = super.getScope(request);
     const originalScope = token.scope;

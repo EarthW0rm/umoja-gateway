@@ -1,6 +1,14 @@
 import { createHash as nodeCreateHash } from 'crypto';
 import type { BinaryLike, BinaryToTextEncoding } from 'crypto';
 
+/**
+ * Creates a cryptographic hash for the provided data.
+ * @param algorithm Hash algorithm name (default sha256).
+ * @param data Input payload to hash.
+ * @param output Optional digest encoding.
+ * @param encoding Optional input encoding when data is a string.
+ * @returns Buffer or encoded string digest.
+ */
 export function createHash({
   algorithm = 'sha256',
   data,

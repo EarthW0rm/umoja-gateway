@@ -6,8 +6,17 @@ import { AbstractGrantType } from './abstract-grant-type';
 import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from '../config/oauth.tokens';
 import { resolveTokenOptions } from '../utils';
 
+/**
+ * Implements the client_credentials grant type for machine-to-machine flows.
+ */
 @Injectable()
 export class ClientCredentialsGrantType extends AbstractGrantType {
+  /**
+   * Creates a client credentials grant handler.
+   * @param options Input payload containing token lifetimes.
+   * @param repository Input payload repository implementing client credential hooks.
+   * @throws {InvalidArgumentException} When repository requirements are not met.
+   */
   constructor(
     @Inject(OAUTH2_SERVER_OPTIONS)
     options: ServerOptions,
@@ -34,6 +43,13 @@ export class ClientCredentialsGrantType extends AbstractGrantType {
     });
   }
 
+  /**
+   * Issues an access token using the client credentials grant.
+   * @param request Input payload containing optional scope.
+   * @param client Input payload representing the OAuth client.
+   * @returns Persisted token model.
+   * @throws {InvalidArgumentException | InvalidGrantException}
+   */
   async handle(request: { body: Record<string, unknown> }, client: OAuthClient) {
     if (!request) {
       throw new InvalidArgumentException('Missing parameter: `request`');
@@ -49,6 +65,12 @@ export class ClientCredentialsGrantType extends AbstractGrantType {
     return this.saveToken(user, client, scope);
   }
 
+  /**
+   * Retrieves the user associated with the client credentials.
+   * @param client Input payload representing the OAuth client.
+   * @returns The resolved user model.
+   * @throws {InvalidGrantException}
+   */
   async getUserFromClient(client: OAuthClient): Promise<OAuthUser> {
     const user = await this.model.getUserFromClient(client);
     if (!user) {
@@ -57,6 +79,13 @@ export class ClientCredentialsGrantType extends AbstractGrantType {
     return user;
   }
 
+  /**
+   * Persists an access token for the client credentials flow.
+   * @param user Input payload representing the resolved user.
+   * @param client Input payload representing the OAuth client.
+   * @param requestedScope Requested scope array.
+   * @returns Saved OAuth token model.
+   */
   async saveToken(user: OAuthUser, client: OAuthClient, requestedScope?: string[]): Promise<OAuthToken> {
     const validatedScope = await this.validateScope(user, client, requestedScope);
     const accessToken = await this.generateAccessToken(client, user, validatedScope);

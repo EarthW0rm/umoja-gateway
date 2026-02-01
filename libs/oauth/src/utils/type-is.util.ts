@@ -12,6 +12,12 @@ const MIME_LOOKUP: Record<string, string> = {
   form: 'application/x-www-form-urlencoded',
 };
 
+/**
+ * Matches a content-type header value against expected media types.
+ * @param value Input payload representing the content-type header.
+ * @param types Expected media types or wildcards.
+ * @returns Matched type or false when none match.
+ */
 export function typeIs(value: string | undefined, types?: string[] | string): string | false {
   const val = tryNormalizeType(value);
   if (!val) {
@@ -34,6 +40,12 @@ export function typeIs(value: string | undefined, types?: string[] | string): st
   return false;
 }
 
+/**
+ * Evaluates a request object to determine if its content-type matches provided types.
+ * @param request Input payload containing headers.
+ * @param types Expected media types or wildcards.
+ * @returns Matched type, false when mismatch, or null when body absent.
+ */
 export function requestType(request: RequestLike, types?: string[] | string): string | false | null {
   if (!hasBody(request)) {
     return null;
@@ -43,12 +55,22 @@ export function requestType(request: RequestLike, types?: string[] | string): st
   return typeIs(value, types);
 }
 
+/**
+ * Checks whether a request likely contains a body by inspecting headers.
+ * @param request Input payload containing headers.
+ * @returns True when content-length or transfer-encoding is present.
+ */
 export function hasBody(request: RequestLike): boolean {
   const transferEncoding = getHeaderValue(request, 'transfer-encoding');
   const contentLength = getHeaderValue(request, 'content-length');
   return typeof transferEncoding !== 'undefined' || !Number.isNaN(Number(contentLength));
 }
 
+/**
+ * Normalizes media type aliases and wildcards to full MIME strings.
+ * @param type Input payload representing a media type.
+ * @returns Normalized MIME string, false when invalid, or null for unsupported values.
+ */
 export function normalize(type: string): string | false | null {
   if (typeof type !== 'string') {
     return false;
@@ -70,6 +92,12 @@ export function normalize(type: string): string | false | null {
   return type.includes('/') ? type : MIME_LOOKUP[type] ?? false;
 }
 
+/**
+ * Compares an expected MIME pattern against an actual MIME type.
+ * @param expected Expected MIME with optional wildcards.
+ * @param actual Actual normalized MIME string.
+ * @returns True when the actual type matches the expected pattern.
+ */
 export function mimeMatch(expected: string | false | null, actual: string): boolean {
   if (!expected) {
     return false;

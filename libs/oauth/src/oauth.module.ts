@@ -14,18 +14,32 @@ import {
   RefreshTokenGrantType,
 } from './grant-types';
 
+/**
+ * Input payload configuring the OAuth module bootstrap.
+ */
 export interface OauthModuleOptions extends ServerOptions {
   includeControllers?: boolean;
 }
 
+/**
+ * Input payload configuring the OAuth module bootstrap asynchronously.
+ */
 export interface OauthModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> {
   useFactory: (...args: any[]) => Promise<OauthModuleOptions> | OauthModuleOptions;
   inject?: any[];
   includeControllers?: boolean;
 }
 
+/**
+ * Nest module that wires OAuth services, handlers, and grant types.
+ */
 @Module({})
 export class OauthModule {
+  /**
+   * Registers the OAuth module with synchronous configuration.
+   * @param options Input payload defining server options and controller inclusion.
+   * @returns Dynamic module definition.
+   */
   static forRoot(options: OauthModuleOptions): DynamicModule {
     const { includeControllers = true, ...serverOptions } = options;
 
@@ -55,6 +69,11 @@ export class OauthModule {
     };
   }
 
+  /**
+   * Registers the OAuth module with async configuration factory.
+   * @param options Input payload defining imports, factory, and controller inclusion.
+   * @returns Dynamic module definition.
+   */
   static forRootAsync(options: OauthModuleAsyncOptions): DynamicModule {
     const { includeControllers = true } = options;
 

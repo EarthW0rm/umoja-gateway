@@ -3,6 +3,12 @@ import { InvalidScopeException } from '../exceptions';
 
 const whiteSpace = /\s+/g;
 
+/**
+ * Parses and validates an OAuth scope string into an array.
+ * @param requestedScope Input payload representing scopes separated by whitespace.
+ * @returns Array of scopes or undefined when absent.
+ * @throws {InvalidScopeException} When scope format is invalid.
+ */
 export function parseScope(requestedScope?: string | null): string[] | undefined {
   if (requestedScope == null) {
     return undefined;

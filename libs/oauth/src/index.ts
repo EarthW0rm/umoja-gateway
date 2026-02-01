@@ -11,6 +11,5 @@ export * from './grant-types';
 export * from './token-types';
 export * from './response-types';
 export * from './handlers';
-export * from './repositorys';
 export * from './oauth.guard';
 export * from './config';

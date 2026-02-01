@@ -7,8 +7,17 @@ import { AbstractGrantType } from './abstract-grant-type';
 import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from '../config/oauth.tokens';
 import { resolveTokenOptions } from '../utils';
 
+/**
+ * Implements the password grant type for first-party resource owner flows.
+ */
 @Injectable()
 export class PasswordGrantType extends AbstractGrantType {
+  /**
+   * Creates a password grant handler.
+   * @param options Input payload containing token lifetimes.
+   * @param repository Input payload repository implementing user lookup and token persistence.
+   * @throws {InvalidArgumentException} When repository requirements are not met.
+   */
   constructor(
     @Inject(OAUTH2_SERVER_OPTIONS)
     options: ServerOptions,
@@ -35,6 +44,13 @@ export class PasswordGrantType extends AbstractGrantType {
     });
   }
 
+  /**
+   * Issues tokens using the resource owner password credentials grant.
+   * @param request Input payload containing username and password.
+   * @param client Input payload representing the OAuth client.
+   * @returns Persisted token model.
+   * @throws {InvalidArgumentException | InvalidGrantException | InvalidRequestException}
+   */
   async handle(request: { body: Record<string, unknown> }, client: OAuthClient) {
     if (!request) {
       throw new InvalidArgumentException('Missing parameter: `request`');
@@ -50,6 +66,13 @@ export class PasswordGrantType extends AbstractGrantType {
     return this.saveToken(user, client, scope);
   }
 
+  /**
+   * Authenticates the resource owner using provided credentials.
+   * @param request Input payload containing username and password.
+   * @param client Input payload representing the OAuth client.
+   * @returns The authenticated user model.
+   * @throws {InvalidRequestException | InvalidGrantException}
+   */
   async getUser(request: { body: Record<string, unknown> }, client: OAuthClient): Promise<OAuthUser> {
     const username = request.body.username as string | undefined;
     const password = request.body.password as string | undefined;
@@ -77,6 +100,13 @@ export class PasswordGrantType extends AbstractGrantType {
     return user;
   }
 
+  /**
+   * Persists access and refresh tokens for the password grant.
+   * @param user Input payload representing the resource owner.
+   * @param client Input payload representing the OAuth client.
+   * @param requestedScope Requested scope array.
+   * @returns Saved OAuth token model.
+   */
   async saveToken(user: OAuthUser, client: OAuthClient, requestedScope?: string[]): Promise<OAuthToken> {
     const validatedScope = await this.validateScope(user, client, requestedScope);
     const accessToken = await this.generateAccessToken(client, user, validatedScope);

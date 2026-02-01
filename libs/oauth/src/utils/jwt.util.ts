@@ -2,10 +2,25 @@ import { randomUUID } from 'crypto';
 import { sign, verify, type JwtPayload, type SignOptions, type VerifyOptions } from 'jsonwebtoken';
 import type { JwtTokenOptions, OAuthClient, OAuthToken, OAuthUser } from '../interfaces';
 
+/**
+ * Output model representing claims stored in OAuth access token JWTs.
+ */
 export interface AccessTokenJwtPayload extends JwtPayload {
+  /**
+   * Client identifier claim.
+   */
   cid: string;
+  /**
+   * Authorized scopes encoded in the token.
+   */
   scope?: string[] | string;
+  /**
+   * Sanitized user attributes.
+   */
   user?: Record<string, unknown>;
+  /**
+   * Sanitized client attributes.
+   */
   client?: Record<string, unknown>;
 }
 
@@ -144,28 +159,36 @@ export function mapPayloadToOAuthToken(token: string, payload: AccessTokenJwtPay
   } as OAuthToken;
 }
 
-function sanitizeUser(user: OAuthUser): Record<string, unknown> {
+/**
+ * Sanitizes user object for JWT payload (strips password).
+ * @internal Exported for testing branch coverage.
+ */
+export function sanitizeUser(user: OAuthUser): Record<string, unknown> {
   const clone: Record<string, unknown> = {};
-  Object.entries(user ?? {}).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(user ?? {})) {
     if (key === 'password') {
-      return;
+      continue;
     }
     clone[key] = value;
-  });
+  }
   if (!clone.id && (user as { username?: string })?.username) {
     clone.id = (user as { username?: string }).username;
   }
   return clone;
 }
 
-function sanitizeClient(client: OAuthClient): Record<string, unknown> {
+/**
+ * Sanitizes client object for JWT payload (strips clientSecret).
+ * @internal Exported for testing branch coverage.
+ */
+export function sanitizeClient(client: OAuthClient): Record<string, unknown> {
   const clone: Record<string, unknown> = {};
-  Object.entries(client ?? {}).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(client ?? {})) {
     if (key === 'clientSecret') {
-      return;
+      continue;
     }
     clone[key] = value;
-  });
+  }
   if (!clone.id && client?.id) {
     clone.id = client.id;
   }
