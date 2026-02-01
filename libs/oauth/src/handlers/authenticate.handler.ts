@@ -24,14 +24,14 @@ export class AuthenticateHandler {
   private addAcceptedScopesHeader?: boolean;
   private addAuthorizedScopesHeader?: boolean;
   private allowBearerTokensInQueryString?: boolean;
-  private oauthRepository: AuthRepository | Record<string, any>;
+  private authRepository: AuthRepository | Record<string, any>;
   private scope?: string[];
   private jwtOptions?: JwtTokenOptions;
 
   /**
    * Builds an authenticate handler with scope and audience validation.
    * @param options Input payload configuring scope, headers, and token options.
-   * @param oauthRepository Input payload repository that provides token operations.
+   * @param authRepository Input payload repository that provides token operations.
    * @throws {InvalidArgumentException} When repository lacks required operations.
    */
   constructor(
@@ -42,22 +42,22 @@ export class AuthenticateHandler {
       addAuthorizedScopesHeader?: boolean;
       allowBearerTokensInQueryString?: boolean;
     },
-    @Inject(AUTH_REPOSITORY) oauthRepository: AuthRepository,
+    @Inject(AUTH_REPOSITORY) authRepository: AuthRepository,
   ) {
     const tokenOptions = resolveTokenOptions(options);
 
-    if (!oauthRepository.getAccessToken) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `getAccessToken()`');
+    if (!authRepository.getAccessToken) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `getAccessToken()`');
     }
 
-    if (options.scope && !oauthRepository.verifyScope) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `verifyScope()`');
+    if (options.scope && !authRepository.verifyScope) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `verifyScope()`');
     }
 
     this.addAcceptedScopesHeader = options.addAcceptedScopesHeader ?? true;
     this.addAuthorizedScopesHeader = options.addAuthorizedScopesHeader ?? true;
     this.allowBearerTokensInQueryString = options.allowBearerTokensInQueryString ?? false;
-    this.oauthRepository = oauthRepository;
+    this.authRepository = authRepository;
     this.scope = Array.isArray(options.scope) ? options.scope : parseScope(options.scope);
     this.jwtOptions = tokenOptions.jwt;
   }
@@ -200,7 +200,7 @@ export class AuthenticateHandler {
       }
     }
 
-    const accessToken = await this.oauthRepository.getAccessToken(token);
+    const accessToken = await this.authRepository.getAccessToken(token);
 
     if (!accessToken) {
       throw new InvalidTokenException('Invalid token: access token is invalid');
@@ -237,7 +237,7 @@ export class AuthenticateHandler {
    * @throws {InsufficientScopeException}
    */
   async verifyScope(accessToken: OAuthToken) {
-    const scope = await this.oauthRepository.verifyScope?.(accessToken, this.scope);
+    const scope = await this.authRepository.verifyScope?.(accessToken, this.scope);
 
     if (!scope) {
       throw new InsufficientScopeException('Insufficient scope: authorized scope is insufficient');
@@ -283,11 +283,11 @@ export class AuthenticateHandler {
    * @throws {InvalidTokenException}
    */
   private async verifyAudience(accessToken: OAuthToken) {
-    const repo = this.oauthRepository as AuthRepository & {
+    const authRepo = this.authRepository as AuthRepository & {
       getAudiences?: (client: any, user: any, scope?: string[]) => Promise<string[] | string | null>;
     };
 
-    if (!repo.getAudiences) {
+    if (!authRepo.getAudiences) {
       return;
     }
 
@@ -296,12 +296,12 @@ export class AuthenticateHandler {
       throw new InvalidTokenException('Invalid token: missing client identifier');
     }
 
-    const client = await repo.getClient(clientId, null);
+    const client = await authRepo.getClient(clientId, null);
     if (!client) {
       throw new InvalidTokenException('Invalid token: client is invalid');
     }
 
-    const expectedAudiences = await repo.getAudiences(client, accessToken.user, accessToken.scope);
+    const expectedAudiences = await authRepo.getAudiences(client, accessToken.user, accessToken.scope);
     if (!expectedAudiences) {
       return;
     }

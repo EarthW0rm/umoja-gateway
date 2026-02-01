@@ -35,7 +35,7 @@ type GrantTypeImpl = { handle: (request: any, client: any) => Promise<any> } | G
 export class TokenHandler {
   private accessTokenLifetime: number;
   private grantTypes: Record<string, GrantTypeImpl>;
-  private oauthRepository: AuthRepository | Record<string, any>;
+  private authRepository: AuthRepository | Record<string, any>;
   private refreshTokenLifetime: number;
   private allowExtendedTokenAttributes?: boolean;
   private requireClientAuthentication: Record<string, boolean>;
@@ -48,7 +48,7 @@ export class TokenHandler {
    * @param clientCredentialsGrant Input payload handler for client_credentials grant.
    * @param passwordGrant Input payload handler for password grant.
    * @param refreshTokenGrant Input payload handler for refresh_token grant.
-   * @param oauthRepository Input payload repository implementing OAuth operations.
+   * @param authRepository Input payload repository implementing OAuth operations.
    * @throws {InvalidArgumentException} When repository lacks required operations.
    */
   constructor(
@@ -57,14 +57,14 @@ export class TokenHandler {
     clientCredentialsGrant: ClientCredentialsGrantType,
     passwordGrant: PasswordGrantType,
     refreshTokenGrant: RefreshTokenGrantType,
-    @Inject(AUTH_REPOSITORY) oauthRepository: AuthRepository,
+    @Inject(AUTH_REPOSITORY) authRepository: AuthRepository,
   ) {
     const tokenOptions = resolveTokenOptions(options);
     const accessTokenLifetime = tokenOptions.accessTokenLifetime ?? 60 * 60;
     const refreshTokenLifetime = tokenOptions.refreshTokenLifetime ?? 60 * 60 * 24 * 14;
 
-    if (!oauthRepository.getClient) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `getClient()`');
+    if (!authRepository.getClient) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `getClient()`');
     }
 
     this.accessTokenLifetime = accessTokenLifetime;
@@ -75,7 +75,7 @@ export class TokenHandler {
       refresh_token: refreshTokenGrant,
       ...(tokenOptions.extendedGrantTypes ?? {}),
     } as Record<string, GrantTypeImpl>;
-    this.oauthRepository = oauthRepository;
+    this.authRepository = authRepository;
     this.refreshTokenLifetime = refreshTokenLifetime;
     this.allowExtendedTokenAttributes = tokenOptions.allowExtendedTokenAttributes;
     this.requireClientAuthentication = tokenOptions.requireClientAuthentication ?? {};
@@ -150,7 +150,7 @@ export class TokenHandler {
     }
 
     try {
-      const client = await (this.oauthRepository as any).getClient(
+      const client = await (this.authRepository as any).getClient(
         credentials.clientId,
         credentials.clientSecret ?? null,
       );
@@ -255,7 +255,7 @@ export class TokenHandler {
     if (typeof Type === 'function') {
       const instance = new (Type as any)({
         accessTokenLifetime,
-        model: this.oauthRepository,
+        authRepository: this.authRepository,
         refreshTokenLifetime,
         alwaysIssueNewRefreshToken: this.alwaysIssueNewRefreshToken,
       });

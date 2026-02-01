@@ -7,7 +7,7 @@ import { UmojaException } from '@core/core';
 export class AccessDeniedException extends UmojaException {
   /**
    * Create an AccessDeniedException.
-   *
+   * @param message - Human-readable message (default: "Access denied").
    * @param innerException - Optional nested error reference.
    */
   constructor(message: string = 'Access denied', innerException?: Error) {

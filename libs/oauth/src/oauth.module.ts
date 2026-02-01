@@ -7,6 +7,8 @@ import { AuthenticateHandler } from './handlers/authenticate.handler';
 import { AuthorizeHandler } from './handlers/authorize.handler';
 import { TokenHandler } from './handlers/token.handler';
 import { OAuthGuard } from './oauth.guard';
+import { OAuthOptionalGuard } from './guards/oauth-optional.guard';
+import { OAuthScopeGuard } from './guards/oauth-scope.guard';
 import {
   AuthorizationCodeGrantType,
   ClientCredentialsGrantType,
@@ -15,18 +17,24 @@ import {
 } from './grant-types';
 
 /**
- * Input payload configuring the OAuth module bootstrap.
+ * Input payload configuring the OAuth module bootstrap (forRoot).
+ * Extends ServerOptions; includeControllers toggles the built-in OauthController.
  */
 export interface OauthModuleOptions extends ServerOptions {
+  /** When true (default), registers OauthController for /oauth/authorize and /oauth/token. */
   includeControllers?: boolean;
 }
 
 /**
- * Input payload configuring the OAuth module bootstrap asynchronously.
+ * Input payload configuring the OAuth module bootstrap asynchronously (forRootAsync).
+ * useFactory receives injected dependencies; result is merged with ServerOptions.
  */
 export interface OauthModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> {
+  /** Factory that returns OauthModuleOptions (e.g. model from AUTH_REPOSITORY). */
   useFactory: (...args: any[]) => Promise<OauthModuleOptions> | OauthModuleOptions;
+  /** Injection tokens for the factory arguments (e.g. [AUTH_REPOSITORY]). */
   inject?: any[];
+  /** When true (default), registers OauthController. */
   includeControllers?: boolean;
 }
 
@@ -59,13 +67,15 @@ export class OauthModule {
       TokenHandler,
       OauthService,
       OAuthGuard,
+      OAuthOptionalGuard,
+      OAuthScopeGuard,
     ];
 
     return {
       module: OauthModule,
       controllers: includeControllers ? [OauthController] : [],
       providers,
-      exports: [OauthService, OAuthGuard],
+      exports: [OauthService, OAuthGuard, OAuthOptionalGuard, OAuthScopeGuard],
     };
   }
 
@@ -98,6 +108,8 @@ export class OauthModule {
       TokenHandler,
       OauthService,
       OAuthGuard,
+      OAuthOptionalGuard,
+      OAuthScopeGuard,
     ];
 
     return {
@@ -105,7 +117,7 @@ export class OauthModule {
       imports: options.imports,
       controllers: includeControllers ? [OauthController] : [],
       providers,
-      exports: [OauthService, OAuthGuard],
+      exports: [OauthService, OAuthGuard, OAuthOptionalGuard, OAuthScopeGuard],
     };
   }
 }

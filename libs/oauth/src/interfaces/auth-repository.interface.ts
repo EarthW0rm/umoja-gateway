@@ -1,12 +1,25 @@
 import type {
-  AuthorizationCodeModel,
-  ClientCredentialsModel,
-  PasswordModel,
-  RefreshTokenModel,
+  AuthorizationCodeRepository,
+  BasicAuthRepository,
+  ClientCredentialsRepository,
+  PasswordRepository,
+  RefreshTokenRepository,
+  ApiKeyRepository,
 } from './model.interfaces';
+import type { BasicAuthValidationResult } from '../guards';
+
+export type { BasicAuthValidationResult };
 
 /**
- * Union of OAuth server models used by the module.
+ * Union of OAuth server repositories used by the module.
  * Useful for DI tokens in consumers (e.g., auth repositories).
+ * Optional validateApiKey and validateBasicAuth allow the repository to act as the single
+ * data conduit for both OAuth and app-level API key / Basic auth validation.
  */
-export interface AuthRepository extends AuthorizationCodeModel, PasswordModel, ClientCredentialsModel, RefreshTokenModel {}
+export interface AuthRepository
+  extends AuthorizationCodeRepository,
+  PasswordRepository,
+  ClientCredentialsRepository,
+  RefreshTokenRepository,
+  BasicAuthRepository,
+  ApiKeyRepository { }

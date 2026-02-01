@@ -10,17 +10,17 @@ export abstract class AbstractGrantType {
   protected accessTokenLifetime: number;
   protected refreshTokenLifetime?: number;
   protected alwaysIssueNewRefreshToken?: boolean;
-  protected model: Record<string, any>;
+  protected authRepository: Record<string, any>;
   protected jwtOptions?: JwtTokenOptions;
 
   /**
-   * Initializes grant type with required lifetimes and model hooks.
+   * Initializes grant type with required lifetimes and auth repository hooks.
    * @param options Input payload defining lifetimes and repository hooks.
    * @throws {InvalidArgumentException} When required options are missing.
    */
   constructor(options: {
     accessTokenLifetime: number;
-    model: Record<string, any>;
+    authRepository: Record<string, any>;
     refreshTokenLifetime?: number;
     alwaysIssueNewRefreshToken?: boolean;
     jwtOptions?: JwtTokenOptions;
@@ -29,12 +29,12 @@ export abstract class AbstractGrantType {
       throw new InvalidArgumentException('Missing parameter: `accessTokenLifetime`');
     }
 
-    if (!options.model) {
-      throw new InvalidArgumentException('Missing parameter: `model`');
+    if (!options.authRepository) {
+      throw new InvalidArgumentException('Missing parameter: `authRepository`');
     }
 
     this.accessTokenLifetime = options.accessTokenLifetime;
-    this.model = options.model;
+    this.authRepository = options.authRepository;
     this.refreshTokenLifetime = options.refreshTokenLifetime;
     this.alwaysIssueNewRefreshToken = options.alwaysIssueNewRefreshToken;
     this.jwtOptions = options.jwtOptions;
@@ -58,8 +58,8 @@ export abstract class AbstractGrantType {
       return signAccessTokenJwt(payload, { ...this.jwtOptions, audience: resolvedAudience }, this.accessTokenLifetime);
     }
 
-    if (this.model.generateAccessToken) {
-      return this.model.generateAccessToken(client, user, scope);
+    if (this.authRepository.generateAccessToken) {
+      return this.authRepository.generateAccessToken(client, user, scope);
     }
 
     return generateRandomToken();
@@ -73,8 +73,8 @@ export abstract class AbstractGrantType {
    * @returns Refresh token string.
    */
   async generateRefreshToken(client: OAuthClient, user: OAuthUser, scope?: string[]): Promise<string> {
-    if (this.model.generateRefreshToken) {
-      return this.model.generateRefreshToken(client, user, scope);
+    if (this.authRepository.generateRefreshToken) {
+      return this.authRepository.generateRefreshToken(client, user, scope);
     }
 
     return generateRandomToken();
@@ -114,8 +114,8 @@ export abstract class AbstractGrantType {
    * @throws {InvalidScopeException}
    */
   async validateScope(user: OAuthUser, client: OAuthClient, scope?: string[]) {
-    if (this.model.validateScope) {
-      const validatedScope = await this.model.validateScope(user, client, scope);
+    if (this.authRepository.validateScope) {
+      const validatedScope = await this.authRepository.validateScope(user, client, scope);
       if (!validatedScope) {
         throw new InvalidScopeException('Invalid scope: Requested scope is invalid');
       }
@@ -133,7 +133,7 @@ export abstract class AbstractGrantType {
    * @returns Audience array or undefined.
    */
   private async resolveAudience(client: OAuthClient, user: OAuthUser, scope?: string[]) {
-    const audienceFromRepo = await this.model.getAudiences?.(client, user, scope);
+    const audienceFromRepo = await this.authRepository.getAudiences?.(client, user, scope);
     if (audienceFromRepo) {
       return normalizeAudience(audienceFromRepo);
     }

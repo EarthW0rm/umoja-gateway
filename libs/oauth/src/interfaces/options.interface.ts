@@ -1,11 +1,11 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { Algorithm } from 'jsonwebtoken';
 import type {
-  AuthorizationCodeModel,
-  ClientCredentialsModel,
-  ExtensionModel,
-  PasswordModel,
-  RefreshTokenModel,
+  AuthorizationCodeRepository,
+  ClientCredentialsRepository,
+  ExtensionRepository,
+  PasswordRepository,
+  RefreshTokenRepository,
 } from './model.interfaces';
 import type { GrantTypeConstructor } from './base.types';
 import type { OAuthUser } from './user.interface';

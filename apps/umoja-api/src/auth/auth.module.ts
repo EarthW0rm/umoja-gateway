@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
-import { AuthRepository, OauthModule } from '@oauth/oauth';
-import { AuthExampleService } from './auth.service';
+import { AuthRepository, OauthModule, ApiKeyGuard, BasicAuthGuard } from '@oauth/oauth';
 import { AuthExampleController } from './auth.controller';
+import { AuthExampleService } from './auth.service';
 import { AuthModelModule } from './auth-model.module';
 import { AUTH_REPOSITORY } from '@oauth/oauth';
 
+/**
+ * Auth feature module: wires OauthModule (token endpoint disabled here), ApiKeyGuard and
+ * BasicAuthGuard (using AUTH_REPOSITORY directly), and AuthExampleController with guard examples.
+ */
 @Module({
   imports: [
     AuthModelModule,
@@ -30,7 +34,7 @@ import { AUTH_REPOSITORY } from '@oauth/oauth';
     }),
   ],
   controllers: [AuthExampleController],
-  providers: [AuthExampleService],
+  providers: [AuthExampleService, ApiKeyGuard, BasicAuthGuard],
   exports: [AuthModelModule],
 })
 export class AuthModule {}

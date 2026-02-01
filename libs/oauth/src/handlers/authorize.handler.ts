@@ -34,13 +34,13 @@ export class AuthorizeHandler {
   private allowEmptyState?: boolean;
   private authenticateHandler: { handle: (request: FastifyRequest, response: FastifyReply) => Promise<OAuthUser> };
   private authorizationCodeLifetime: number;
-  private oauthRepository: AuthRepository | Record<string, any>;
+  private authRepository: AuthRepository | Record<string, any>;
 
   /**
    * Builds an authorize handler capable of issuing authorization codes.
    * @param options Input payload with handler hooks and timing options.
    * @param authenticateHandler Input payload delegating user authentication.
-   * @param oauthRepository Input payload repository implementing OAuth flows.
+   * @param authRepository Input payload repository implementing OAuth flows.
    * @throws {InvalidArgumentException} When required operations are missing.
    */
   constructor(
@@ -51,20 +51,18 @@ export class AuthorizeHandler {
       authorizationCodeLifetime?: number;
     },
     authenticateHandler: AuthenticateHandler,
-    @Inject(AUTH_REPOSITORY) oauthRepository: AuthRepository,
+    @Inject(AUTH_REPOSITORY) authRepository: AuthRepository,
   ) {
     if (options.authenticateHandler && !options.authenticateHandler.handle) {
       throw new InvalidArgumentException('Invalid argument: authenticateHandler does not implement `handle()`');
     }
 
-    const model = oauthRepository as AuthRepository | Record<string, any>;
-
-    if (!model.getClient) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `getClient()`');
+    if (!authRepository.getClient) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `getClient()`');
     }
 
-    if (!model.saveAuthorizationCode) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `saveAuthorizationCode()`');
+    if (!authRepository.saveAuthorizationCode) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `saveAuthorizationCode()`');
     }
 
     this.allowEmptyState = options.allowEmptyState ?? false;
@@ -73,7 +71,7 @@ export class AuthorizeHandler {
       throw new InvalidArgumentException('Missing parameter: `authenticateHandler`');
     }
     this.authorizationCodeLifetime = options.authorizationCodeLifetime ?? 5 * 60;
-    this.oauthRepository = model;
+    this.authRepository = authRepository;
   }
 
   /**
@@ -143,8 +141,8 @@ export class AuthorizeHandler {
    * @returns The generated code string.
    */
   async generateAuthorizationCode(client: OAuthClient, user: OAuthUser, scope?: string[]) {
-    if ((this.oauthRepository as any).generateAuthorizationCode) {
-      return (this.oauthRepository as any).generateAuthorizationCode(client, user, scope);
+    if ((this.authRepository as any).generateAuthorizationCode) {
+      return (this.authRepository as any).generateAuthorizationCode(client, user, scope);
     }
     return generateRandomToken();
   }
@@ -182,7 +180,7 @@ export class AuthorizeHandler {
       throw new InvalidRequestException('Invalid request: `redirect_uri` is not a valid URI');
     }
 
-    const client = await (this.oauthRepository as any).getClient(clientId, null);
+    const client = await (this.authRepository as any).getClient(clientId, null);
     if (!client) {
       throw new InvalidClientException('Invalid client: client credentials are invalid');
     }
@@ -219,8 +217,8 @@ export class AuthorizeHandler {
    * @throws {InvalidScopeException}
    */
   async validateScope(user: OAuthUser, client: OAuthClient, scope?: string[]) {
-    if ((this.oauthRepository as any).validateScope) {
-      const validatedScope = await (this.oauthRepository as any).validateScope(user, client, scope);
+    if ((this.authRepository as any).validateScope) {
+      const validatedScope = await (this.authRepository as any).validateScope(user, client, scope);
       if (!validatedScope) {
         throw new InvalidScopeException('Invalid scope: Requested scope is invalid');
       }
@@ -336,7 +334,7 @@ export class AuthorizeHandler {
       };
     }
 
-    return (this.oauthRepository as any).saveAuthorizationCode(code, client, user);
+    return (this.authRepository as any).saveAuthorizationCode(code, client, user);
   }
 
   /**
@@ -346,8 +344,8 @@ export class AuthorizeHandler {
    * @returns True when valid, false otherwise.
    */
   async validateRedirectUri(redirectUri: string, client: OAuthClient) {
-    if ((this.oauthRepository as any).validateRedirectUri) {
-      return (this.oauthRepository as any).validateRedirectUri(redirectUri, client);
+    if ((this.authRepository as any).validateRedirectUri) {
+      return (this.authRepository as any).validateRedirectUri(redirectUri, client);
     }
 
     const redirectUris = Array.isArray(client.redirectUris) ? client.redirectUris : [client.redirectUris];

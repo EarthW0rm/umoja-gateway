@@ -15,29 +15,29 @@ export class PasswordGrantType extends AbstractGrantType {
   /**
    * Creates a password grant handler.
    * @param options Input payload containing token lifetimes.
-   * @param repository Input payload repository implementing user lookup and token persistence.
+   * @param authRepository Input payload repository implementing user lookup and token persistence.
    * @throws {InvalidArgumentException} When repository requirements are not met.
    */
   constructor(
     @Inject(OAUTH2_SERVER_OPTIONS)
     options: ServerOptions,
-    @Inject(AUTH_REPOSITORY) repository: AuthRepository,
+    @Inject(AUTH_REPOSITORY) authRepository: AuthRepository,
   ) {
     const tokenOptions = resolveTokenOptions(options);
     const accessTokenLifetime = tokenOptions.accessTokenLifetime ?? 60 * 60;
     const refreshTokenLifetime = tokenOptions.refreshTokenLifetime ?? 60 * 60 * 24 * 14;
 
-    if (!repository.getUser) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `getUser()`');
+    if (!authRepository.getUser) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `getUser()`');
     }
 
-    if (!repository.saveToken) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `saveToken()`');
+    if (!authRepository.saveToken) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `saveToken()`');
     }
 
     super({
       accessTokenLifetime,
-      model: repository as Record<string, any>,
+      authRepository: authRepository as Record<string, any>,
       refreshTokenLifetime,
       alwaysIssueNewRefreshToken: tokenOptions.alwaysIssueNewRefreshToken,
       jwtOptions: tokenOptions.jwt,
@@ -93,7 +93,7 @@ export class PasswordGrantType extends AbstractGrantType {
       throw new InvalidRequestException('Invalid parameter: `password`');
     }
 
-    const user = await this.model.getUser(username, password, client);
+    const user = await this.authRepository.getUser(username, password, client);
     if (!user) {
       throw new InvalidGrantException('Invalid grant: user credentials are invalid');
     }
@@ -124,6 +124,6 @@ export class PasswordGrantType extends AbstractGrantType {
       user,
     } as OAuthToken;
 
-    return this.model.saveToken(token, client, user);
+    return this.authRepository.saveToken(token, client, user);
   }
 }

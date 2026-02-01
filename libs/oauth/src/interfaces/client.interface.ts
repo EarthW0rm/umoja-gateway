@@ -11,6 +11,10 @@ export interface OAuthClient {
    */
   redirectUris?: string | string[];
   /**
+   * Client secret for confidential clients. Must be kept secure.
+   */
+  clientSecret?: string;
+  /**
    * Authorized grant types for this client.
    */
   grants: string[] | string;
@@ -23,7 +27,7 @@ export interface OAuthClient {
    */
   refreshTokenLifetime?: number;
   /**
-   * Additional client metadata.
+   * Additional client metadata (e.g. scope, userId, audiences).
    */
   [key: string]: unknown;
 }

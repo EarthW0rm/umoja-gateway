@@ -25,9 +25,10 @@ export interface AccessTokenJwtPayload extends JwtPayload {
 }
 
 /**
- * Builds a sanitized JWT payload for access tokens.
- * @param params - Client, user and scopes to embed in the token.
- * @returns Payload ready to be signed.
+ * Builds a sanitized JWT payload for access tokens (sub, cid, scope, user, client).
+ * @param params - Client, user and optional scope array to embed in the token.
+ * @returns Payload ready to be signed (AccessTokenJwtPayload).
+ * @throws {Error} When user or client has no identifier.
  */
 export function buildAccessTokenPayload(params: {
   client: OAuthClient;
@@ -86,8 +87,9 @@ export function signAccessTokenJwt(
 /**
  * Verifies a JWT access token and returns its payload.
  * @param token - Raw JWT string.
- * @param options - JWT configuration.
+ * @param options - JWT configuration (publicKey, secret, or privateKey; issuer, audience optional).
  * @returns Decoded payload if the signature and claims are valid.
+ * @throws {Error} When verification key is missing or token is invalid/expired.
  */
 export function verifyAccessTokenJwt(token: string, options: JwtTokenOptions): AccessTokenJwtPayload {
   const verificationKey = options.publicKey ?? options.secret ?? options.privateKey;
@@ -160,7 +162,9 @@ export function mapPayloadToOAuthToken(token: string, payload: AccessTokenJwtPay
 }
 
 /**
- * Sanitizes user object for JWT payload (strips password).
+ * Sanitizes user object for JWT payload (strips password, ensures id).
+ * @param user - OAuth user from the repository.
+ * @returns Plain object safe to embed in JWT (no password).
  * @internal Exported for testing branch coverage.
  */
 export function sanitizeUser(user: OAuthUser): Record<string, unknown> {
@@ -178,7 +182,9 @@ export function sanitizeUser(user: OAuthUser): Record<string, unknown> {
 }
 
 /**
- * Sanitizes client object for JWT payload (strips clientSecret).
+ * Sanitizes client object for JWT payload (strips clientSecret, ensures id).
+ * @param client - OAuth client from the repository.
+ * @returns Plain object safe to embed in JWT (no clientSecret).
  * @internal Exported for testing branch coverage.
  */
 export function sanitizeClient(client: OAuthClient): Record<string, unknown> {

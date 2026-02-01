@@ -21,33 +21,33 @@ export class RefreshTokenGrantType extends AbstractGrantType {
   /**
    * Creates a refresh token grant handler.
    * @param options Input payload containing token lifetimes.
-   * @param repository Input payload repository implementing refresh token operations.
+   * @param authRepository Input payload repository implementing refresh token operations.
    * @throws {InvalidArgumentException} When repository requirements are not met.
    */
   constructor(
     @Inject(OAUTH2_SERVER_OPTIONS)
     options: ServerOptions,
-    @Inject(AUTH_REPOSITORY) repository: AuthRepository,
+    @Inject(AUTH_REPOSITORY) authRepository: AuthRepository,
   ) {
     const tokenOptions = resolveTokenOptions(options);
     const accessTokenLifetime = tokenOptions.accessTokenLifetime ?? 60 * 60;
     const refreshTokenLifetime = tokenOptions.refreshTokenLifetime ?? 60 * 60 * 24 * 14;
 
-    if (!repository.getRefreshToken) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `getRefreshToken()`');
+    if (!authRepository.getRefreshToken) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `getRefreshToken()`');
     }
 
-    if (!repository.revokeToken) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `revokeToken()`');
+    if (!authRepository.revokeToken) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `revokeToken()`');
     }
 
-    if (!repository.saveToken) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `saveToken()`');
+    if (!authRepository.saveToken) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `saveToken()`');
     }
 
     super({
       accessTokenLifetime,
-      model: repository as Record<string, any>,
+      authRepository: authRepository as Record<string, any>,
       refreshTokenLifetime,
       alwaysIssueNewRefreshToken: tokenOptions.alwaysIssueNewRefreshToken,
       jwtOptions: tokenOptions.jwt,
@@ -95,7 +95,7 @@ export class RefreshTokenGrantType extends AbstractGrantType {
       throw new InvalidRequestException('Invalid parameter: `refresh_token`');
     }
 
-    const token = await this.model.getRefreshToken(refreshTokenValue);
+    const token = await this.authRepository.getRefreshToken(refreshTokenValue);
     if (!token) {
       throw new InvalidGrantException('Invalid grant: refresh token is invalid');
     }
@@ -134,7 +134,7 @@ export class RefreshTokenGrantType extends AbstractGrantType {
       return token;
     }
 
-    const status = await this.model.revokeToken(token);
+    const status = await this.authRepository.revokeToken(token);
     if (!status) {
       throw new InvalidGrantException('Invalid grant: refresh token is invalid or could not be revoked');
     }
@@ -167,7 +167,7 @@ export class RefreshTokenGrantType extends AbstractGrantType {
       token.refreshTokenExpiresAt = refreshTokenExpiresAt;
     }
 
-    return this.model.saveToken(token, client, user);
+    return this.authRepository.saveToken(token, client, user);
   }
 
   /**

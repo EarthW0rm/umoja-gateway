@@ -4,11 +4,12 @@ import type { OAuthToken } from './token.interface';
 import type { OAuthUser } from './user.interface';
 import type { RefreshToken } from './refresh-token.interface';
 import type { Falsey } from './base.types';
+import { BasicAuthValidationResult } from '../guards/validators.interface';
 
 /**
- * Input payload contract for shared OAuth model operations.
+ * Input payload contract for shared OAuth repository operations.
  */
-export interface BaseModel {
+export interface BaseRepository {
   /**
    * Generates an access token string.
    */
@@ -18,7 +19,7 @@ export interface BaseModel {
    */
   getClient(clientId: string, clientSecret: string | null): Promise<OAuthClient | Falsey>;
   /**
-   * Persists an issued token model.
+   * Persists an issued token.
    */
   saveToken(token: OAuthToken, client: OAuthClient, user: OAuthUser): Promise<OAuthToken | Falsey>;
   /**
@@ -28,9 +29,9 @@ export interface BaseModel {
 }
 
 /**
- * Input payload contract for authentication-specific model operations.
+ * Input payload contract for authentication-specific repository operations.
  */
-export interface RequestAuthenticationModel {
+export interface RequestAuthenticationRepository {
   /**
    * Retrieves an access token by its value.
    */
@@ -44,7 +45,7 @@ export interface RequestAuthenticationModel {
 /**
  * Input payload contract for authorization code grant storage.
  */
-export interface AuthorizationCodeModel extends BaseModel, RequestAuthenticationModel {
+export interface AuthorizationCodeRepository extends BaseRepository, RequestAuthenticationRepository {
   /**
    * Generates a refresh token string.
    */
@@ -85,7 +86,7 @@ export interface AuthorizationCodeModel extends BaseModel, RequestAuthentication
 /**
  * Input payload contract for password grant storage.
  */
-export interface PasswordModel extends BaseModel, RequestAuthenticationModel {
+export interface PasswordRepository extends BaseRepository, RequestAuthenticationRepository {
   /**
    * Generates a refresh token string.
    */
@@ -103,7 +104,7 @@ export interface PasswordModel extends BaseModel, RequestAuthenticationModel {
 /**
  * Input payload contract for refresh token grant storage.
  */
-export interface RefreshTokenModel extends BaseModel, RequestAuthenticationModel {
+export interface RefreshTokenRepository extends BaseRepository, RequestAuthenticationRepository {
   /**
    * Generates a refresh token string.
    */
@@ -121,7 +122,7 @@ export interface RefreshTokenModel extends BaseModel, RequestAuthenticationModel
 /**
  * Input payload contract for client credentials grant storage.
  */
-export interface ClientCredentialsModel extends BaseModel, RequestAuthenticationModel {
+export interface ClientCredentialsRepository extends BaseRepository, RequestAuthenticationRepository {
   /**
    * Resolves the user associated with the client credentials.
    */
@@ -135,4 +136,32 @@ export interface ClientCredentialsModel extends BaseModel, RequestAuthentication
 /**
  * Input payload contract for custom extension grant storage.
  */
-export interface ExtensionModel extends BaseModel, RequestAuthenticationModel {}
+export interface ExtensionRepository extends BaseRepository, RequestAuthenticationRepository {}
+
+/**
+ * Input payload contract for API key validation.
+ */
+export interface ApiKeyRepository extends BaseRepository, RequestAuthenticationRepository {
+  /**
+   * Validates the x-api-key header value (when implemented).
+   * Enables the repository to be the single source of truth for API key validation.
+   * @param apiKey - Value from the request header.
+   * @returns True when the key is valid.
+   */
+  validateApiKey?(apiKey: string | undefined): boolean;
+}
+
+/**
+ * Input payload contract for Basic auth validation.
+ */
+export interface BasicAuthRepository extends BaseRepository, RequestAuthenticationRepository {
+  
+  /**
+   * Validates username/password (e.g. Basic auth) and returns the user when valid (when implemented).
+   * Enables the repository to be the single data conduit for Basic auth.
+   * @param username - Username from the Basic auth header.
+   * @param password - Password from the Basic auth header.
+   * @returns The user when valid, or null when invalid.
+   */
+  validateBasicAuth?(username: string, password: string): Promise<BasicAuthValidationResult | null>;
+}

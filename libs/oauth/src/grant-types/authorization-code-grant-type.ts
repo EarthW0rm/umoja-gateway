@@ -7,7 +7,7 @@ import {
   ServerException,
 } from '../exceptions';
 import { getHashForCodeChallenge } from '../utils/pkce/pkce.util';
-import type { AuthorizationCode, OAuthClient, OAuthToken, OAuthUser, AuthorizationCodeModel } from '../interfaces';
+import type { AuthorizationCode, OAuthClient, OAuthToken, OAuthUser, AuthorizationCodeRepository } from '../interfaces';
 import { AbstractGrantType } from './abstract-grant-type';
 import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from '../config/oauth.tokens';
 import type { ServerOptions } from '../interfaces';
@@ -21,37 +21,36 @@ export class AuthorizationCodeGrantType extends AbstractGrantType {
   /**
    * Creates an authorization code grant handler.
    * @param options Input payload containing token lifetimes.
-   * @param oauthRepository Input payload repository implementing authorization code storage.
+   * @param authRepository Input payload repository implementing authorization code storage.
    * @throws {InvalidArgumentException} When repository requirements are not met.
    */
   constructor(
     @Inject(OAUTH2_SERVER_OPTIONS)
     options: ServerOptions,
-    @Inject(AUTH_REPOSITORY) oauthRepository: AuthorizationCodeModel,
+    @Inject(AUTH_REPOSITORY) authRepository: AuthorizationCodeRepository,
   ) {
     const tokenOptions = resolveTokenOptions(options);
-    const model = oauthRepository as AuthorizationCodeModel;
     const merged = {
       accessTokenLifetime: tokenOptions.accessTokenLifetime ?? 60 * 60,
       refreshTokenLifetime: tokenOptions.refreshTokenLifetime ?? 60 * 60 * 24 * 14,
-      model,
+      authRepository: authRepository as AuthorizationCodeRepository,
       alwaysIssueNewRefreshToken: tokenOptions.alwaysIssueNewRefreshToken ?? true,
       jwtOptions: tokenOptions.jwt,
     };
-    if (!model) {
-      throw new InvalidArgumentException('Missing parameter: `model`');
+    if (!authRepository) {
+      throw new InvalidArgumentException('Missing parameter: `authRepository`');
     }
 
-    if (!model.getAuthorizationCode) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `getAuthorizationCode()`');
+    if (!authRepository.getAuthorizationCode) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `getAuthorizationCode()`');
     }
 
-    if (!model.revokeAuthorizationCode) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `revokeAuthorizationCode()`');
+    if (!authRepository.revokeAuthorizationCode) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `revokeAuthorizationCode()`');
     }
 
-    if (!model.saveToken) {
-      throw new InvalidArgumentException('Invalid argument: model does not implement `saveToken()`');
+    if (!authRepository.saveToken) {
+      throw new InvalidArgumentException('Invalid argument: authRepository does not implement `saveToken()`');
     }
 
     super(merged);
@@ -100,7 +99,7 @@ export class AuthorizationCodeGrantType extends AbstractGrantType {
       throw new InvalidRequestException('Invalid parameter: `code`');
     }
 
-    const code = await this.model.getAuthorizationCode(codeValue);
+    const code = await this.authRepository.getAuthorizationCode(codeValue);
     if (!code) {
       throw new InvalidGrantException('Invalid grant: authorization code is invalid');
     }
@@ -186,7 +185,7 @@ export class AuthorizationCodeGrantType extends AbstractGrantType {
    * @throws {InvalidGrantException}
    */
   async revokeAuthorizationCode(code: AuthorizationCode) {
-    const status = await this.model.revokeAuthorizationCode(code);
+    const status = await this.authRepository.revokeAuthorizationCode(code);
     if (!status) {
       throw new InvalidGrantException('Invalid grant: authorization code is invalid');
     }
@@ -224,6 +223,6 @@ export class AuthorizationCodeGrantType extends AbstractGrantType {
       user,
     } as OAuthToken;
 
-    return this.model.saveToken(token, client, user);
+    return this.authRepository.saveToken(token, client, user);
   }
 }

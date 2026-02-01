@@ -1,3 +1,6 @@
+/**
+ * OAuth exceptions: standardized error types for OAuth flows.
+ */
 export { OAuthException } from './oauth.exception';
 export { AccessDeniedException } from './access-denied.exception';
 export { InsufficientScopeException } from './insufficient-scope.exception';
