@@ -1,0 +1,77 @@
+{
+  "kind": "collectionType",
+  "collectionName": "oauth_clients",
+  "info": {
+    "singularName": "oauth-client",
+    "pluralName": "oauth-clients",
+    "displayName": "OAuth Client"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "redirectUris": {
+      "type": "json",
+      "required": true
+    },
+    "clientSecret": {
+      "type": "string",
+      "required": true
+    },
+    "grants": {
+      "type": "json",
+      "required": true
+    },
+    "accessTokenLifetime": {
+      "type": "integer",
+      "required": true
+    },
+    "refreshTokenLifetime": {
+      "type": "integer",
+      "required": true
+    },
+    "product": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::oauth-product.oauth-product",
+      "inversedBy": "clients"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::oauth-user.oauth-user",
+      "inversedBy": "clients"
+    },
+    "audiences": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::audience.audience",
+      "inversedBy": "clients"
+    },
+    "tokens": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::oauth-token.oauth-token",
+      "mappedBy": "client"
+    },
+    "refreshTokens": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::refresh-token.refresh-token",
+      "mappedBy": "client"
+    },
+    "authorizationCodes": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::authorization-code.authorization-code",
+      "mappedBy": "client"
+    },
+    "apiKeys": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::api-key.api-key",
+      "mappedBy": "client"
+    }
+  }
+}

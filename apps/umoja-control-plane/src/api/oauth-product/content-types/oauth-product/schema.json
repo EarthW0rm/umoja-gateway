@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "oauth_products",
+  "info": {
+    "singularName": "oauth-product",
+    "pluralName": "oauth-products",
+    "displayName": "OAuth Product"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "logoUri": {
+      "type": "string"
+    },
+    "privacyPolicyUrl": {
+      "type": "string"
+    },
+    "termsOfServiceUrl": {
+      "type": "string"
+    },
+    "owners": {
+      "type": "json"
+    },
+    "clients": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::oauth-client.oauth-client",
+      "mappedBy": "product"
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "kind": "collectionType",
+  "collectionName": "oauth_users",
+  "info": {
+    "singularName": "oauth-user",
+    "pluralName": "oauth-users",
+    "displayName": "OAuth User"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "username": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "password": {
+      "type": "string",
+      "required": true
+    },
+    "audiences": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::audience.audience",
+      "inversedBy": "users"
+    },
+    "clients": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::oauth-client.oauth-client",
+      "mappedBy": "user"
+    },
+    "tokens": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::oauth-token.oauth-token",
+      "mappedBy": "user"
+    },
+    "refreshTokens": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::refresh-token.refresh-token",
+      "mappedBy": "user"
+    },
+    "authorizationCodes": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::authorization-code.authorization-code",
+      "mappedBy": "user"
+    }
+  }
+}

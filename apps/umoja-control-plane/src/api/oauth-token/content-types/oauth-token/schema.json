@@ -1,0 +1,46 @@
+{
+  "kind": "collectionType",
+  "collectionName": "oauth_tokens",
+  "info": {
+    "singularName": "oauth-token",
+    "pluralName": "oauth-tokens",
+    "displayName": "OAuth Token"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "accessToken": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "accessTokenExpiresAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "refreshToken": {
+      "type": "string",
+      "unique": true
+    },
+    "refreshTokenExpiresAt": {
+      "type": "datetime"
+    },
+    "scope": {
+      "type": "json"
+    },
+    "client": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::oauth-client.oauth-client",
+      "inversedBy": "tokens"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::oauth-user.oauth-user",
+      "inversedBy": "tokens"
+    }
+  }
+}
