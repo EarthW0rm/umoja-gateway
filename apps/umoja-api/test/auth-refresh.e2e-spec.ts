@@ -9,7 +9,7 @@ describe('OAuth refresh_token grant (e2e)', () => {
   });
 
   afterAll(async () => {
-    await ctx.app.close();
+    if (ctx?.app) await ctx.app.close();
   });
 
   it(

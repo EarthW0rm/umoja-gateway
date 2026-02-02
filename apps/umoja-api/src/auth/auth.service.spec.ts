@@ -2,8 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { AUTH_REPOSITORY } from '@oauth/oauth';
 import { AuthExampleService } from './auth.service';
-import { InMemoryAuthRepository } from './in-memory-auth.repository';
-import { AUTH_EXPECTED_API_KEY } from './auth.tokens';
+import {
+  InMemoryAuthRepository,
+  AUTH_EXPECTED_API_KEY,
+} from '@control-plane/control-plane';
 
 describe('AuthExampleService', () => {
   let service: AuthExampleService;
@@ -27,16 +29,16 @@ describe('AuthExampleService', () => {
   });
 
   describe('registerClient', () => {
-    it('returns client with id, clientSecret and default grants', () => {
-      const result = service.registerClient({ name: 'test' });
+    it('returns client with id, clientSecret and default grants', async () => {
+      const result = await service.registerClient({ name: 'test' });
       expect(result.id).toBeDefined();
       expect(result.clientSecret).toBeDefined();
       expect(result.grants).toEqual(['client_credentials', 'password', 'refresh_token']);
       expect(result.audiences).toEqual(['umoja-clients']);
     });
 
-    it('uses provided grants and audiences', () => {
-      const result = service.registerClient({
+    it('uses provided grants and audiences', async () => {
+      const result = await service.registerClient({
         name: 'test',
         grants: ['client_credentials'],
         audiences: ['custom-aud'],
@@ -47,15 +49,15 @@ describe('AuthExampleService', () => {
   });
 
   describe('registerUser', () => {
-    it('returns user with id, username and scope', () => {
-      const result = service.registerUser('alice', 'secret', ['read', 'write']);
+    it('returns user with id, username and scope', async () => {
+      const result = await service.registerUser('alice', 'secret', ['read', 'write']);
       expect(result.id).toBe('alice');
       expect((result as any).username).toBe('alice');
       expect(result.scope).toEqual(['read', 'write']);
     });
 
     it('stores user in repository so getUser can find it', async () => {
-      service.registerUser('bob', 'pass', ['read']);
+      await service.registerUser('bob', 'pass', ['read']);
       const client = await repository.getClient('demo-client', null);
       expect(client).toBeTruthy();
       const user = await repository.getUser('bob', 'pass', client as any);
@@ -97,7 +99,7 @@ describe('AuthExampleService', () => {
       }).compile();
       const svc = module.get<AuthExampleService>(AuthExampleService);
       expect(svc).toBeDefined();
-      expect(() => svc.registerClient({ name: 'x' })).toThrow();
+      await expect(svc.registerClient({ name: 'x' })).rejects.toThrow();
     });
   });
 });

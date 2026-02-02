@@ -1,5 +1,11 @@
 import { Module } from '@nestjs/common';
-import { AuthRepository, OauthModule, ApiKeyGuard, BasicAuthGuard } from '@oauth/oauth';
+import {
+  AuthRepository,
+  BasicAuthAuthorizeHandler,
+  OauthModule,
+  ApiKeyGuard,
+  BasicAuthGuard,
+} from '@oauth/oauth';
 import { AuthExampleController } from './auth.controller';
 import { AuthExampleService } from './auth.service';
 import { AuthModelModule } from './auth-model.module';
@@ -8,14 +14,16 @@ import { AUTH_REPOSITORY } from '@oauth/oauth';
 /**
  * Auth feature module: wires OauthModule (token endpoint disabled here), ApiKeyGuard and
  * BasicAuthGuard (using AUTH_REPOSITORY directly), and AuthExampleController with guard examples.
+ * Uses BasicAuthAuthorizeHandler so /oauth/authorize accepts Authorization: Basic (resource owner).
  */
 @Module({
   imports: [
     AuthModelModule,
     OauthModule.forRootAsync({
       imports: [AuthModelModule],
-      useFactory: (authRepository: AuthRepository) => ({
+      useFactory: (authRepository: AuthRepository, basicAuthAuthorizeHandler: BasicAuthAuthorizeHandler) => ({
         model: authRepository,
+        authenticateHandler: basicAuthAuthorizeHandler,
         includeControllers: false,
         token: {
           accessTokenLifetime: 30 * 60, // 30 minutos
@@ -30,7 +38,7 @@ import { AUTH_REPOSITORY } from '@oauth/oauth';
           },
         },
       }),
-      inject: [AUTH_REPOSITORY],
+      inject: [AUTH_REPOSITORY, BasicAuthAuthorizeHandler],
     }),
   ],
   controllers: [AuthExampleController],

@@ -1,4 +1,4 @@
-import { InMemoryAuthRepository } from './in-memory-auth.repository';
+import { InMemoryAuthRepository } from '@control-plane/control-plane';
 import type {
   OAuthClient,
   OAuthUser,

@@ -32,6 +32,39 @@ npm run build
 yarn build
 ```
 
+## Env vars (sample)
+
+```
+HOST=0.0.0.0
+PORT=1337
+APP_KEYS="toBeModified1,toBeModified2"
+API_TOKEN_SALT=tobemodified
+ADMIN_JWT_SECRET=tobemodified
+ADMIN_SESSION_MAX_LIFESPAN=1d
+ADMIN_REFRESH_MAX_LIFESPAN=30d
+TRANSFER_TOKEN_SALT=tobemodified
+JWT_SECRET=tobemodified
+ENCRYPTION_KEY=tobemodified
+CONTROL_PLANE_STRAPI_API_TOKEN=some-token
+```
+
+### `seed:oauth`
+
+Populate OAuth demo data (produto `umoja`, usuário `demo-user`, cliente com grants e API key).
+
+```
+npm run seed:oauth
+# ou
+yarn seed:oauth
+```
+
+Executa apenas uma vez por ambiente (usa flag `oauthInitHasRun` na store do Strapi). Para reexecutar, limpe o banco ou remova a flag da store.
+
+Credenciais criadas pelo seed:
+- Client secret: `umoja-demo-secret`
+- Client id: id numérico gerado pelo Strapi (ver log após o seed)
+- API key: `umoja-api-key-demo`
+
 ## ⚙️ Deployment
 
 Strapi gives you many possible deployment options for your project including [Strapi Cloud](https://cloud.strapi.io). Browse the [deployment section of the documentation](https://docs.strapi.io/dev-docs/deployment) to find the best solution for your use case.

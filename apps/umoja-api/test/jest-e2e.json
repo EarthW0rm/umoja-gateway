@@ -1,6 +1,7 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
+  "setupFiles": ["./utils/env.js"],
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
@@ -8,6 +9,7 @@
   },
   "moduleNameMapper": {
     "^@oauth/oauth(|/.*)$": "<rootDir>/../../../libs/oauth/src/$1",
-    "^@core/core(|/.*)$": "<rootDir>/../../../libs/core/src/$1"
+    "^@core/core(|/.*)$": "<rootDir>/../../../libs/core/src/$1",
+    "^@control-plane/control-plane(|/.*)$": "<rootDir>/../../../libs/control-plane/src/$1"
   }
 }

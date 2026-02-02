@@ -815,7 +815,7 @@ export interface ApiOauthTokenOauthToken extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
-    accessToken: Schema.Attribute.String &
+    accessToken: Schema.Attribute.Text &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
     accessTokenExpiresAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
@@ -833,7 +833,7 @@ export interface ApiOauthTokenOauthToken extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
-    refreshToken: Schema.Attribute.String & Schema.Attribute.Unique;
+    refreshToken: Schema.Attribute.Text & Schema.Attribute.Unique;
     refreshTokenExpiresAt: Schema.Attribute.DateTime;
     scope: Schema.Attribute.JSON;
     updatedAt: Schema.Attribute.DateTime;
@@ -920,7 +920,7 @@ export interface ApiRefreshTokenRefreshToken
     > &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
-    refreshToken: Schema.Attribute.String &
+    refreshToken: Schema.Attribute.Text &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
     refreshTokenExpiresAt: Schema.Attribute.DateTime &

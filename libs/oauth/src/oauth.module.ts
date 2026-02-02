@@ -5,6 +5,7 @@ import { AUTH_REPOSITORY, OAUTH2_SERVER_OPTIONS } from './config/oauth.tokens';
 import type { ServerOptions } from './interfaces';
 import { AuthenticateHandler } from './handlers/authenticate.handler';
 import { AuthorizeHandler } from './handlers/authorize.handler';
+import { BasicAuthAuthorizeHandler } from './handlers/basic-auth-authorize.handler';
 import { TokenHandler } from './handlers/token.handler';
 import { OAuthGuard } from './oauth.guard';
 import { OAuthOptionalGuard } from './guards/oauth-optional.guard';
@@ -59,6 +60,7 @@ export class OauthModule {
     const providers = [
       optionsProvider,
       AuthenticateHandler,
+      BasicAuthAuthorizeHandler,
       AuthorizeHandler,
       AuthorizationCodeGrantType,
       ClientCredentialsGrantType,
@@ -100,6 +102,7 @@ export class OauthModule {
     const providers: Provider[] = [
       optionsProvider,
       AuthenticateHandler,
+      BasicAuthAuthorizeHandler,
       AuthorizeHandler,
       AuthorizationCodeGrantType,
       ClientCredentialsGrantType,

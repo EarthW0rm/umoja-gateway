@@ -18,6 +18,12 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
+      "@control-plane/control-plane": [
+        "libs/control-plane/src"
+      ],
+      "@control-plane/control-plane/*": [
+        "libs/control-plane/src/*"
+      ],
       "@core/core": [
         "libs/core/src"
       ],

@@ -9,7 +9,7 @@ describe('OAuth guards (e2e)', () => {
   });
 
   afterAll(async () => {
-    await ctx.app.close();
+    if (ctx?.app) await ctx.app.close();
   });
 
   describe('OAuthGuard (GET /auth-demo/profile)', () => {

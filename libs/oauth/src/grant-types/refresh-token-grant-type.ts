@@ -97,7 +97,9 @@ export class RefreshTokenGrantType extends AbstractGrantType {
 
     const token = await this.authRepository.getRefreshToken(refreshTokenValue);
     if (!token) {
-      throw new InvalidGrantException('Invalid grant: refresh token is invalid');
+      throw new InvalidGrantException(
+        'Invalid grant: refresh token is invalid or not found. Use a refresh_token from password or authorization_code grant (client_credentials does not issue refresh tokens).',
+      );
     }
 
     if (!token.client) {

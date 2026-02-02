@@ -10,7 +10,7 @@ describe('OAuth JWT access token (e2e)', () => {
   });
 
   afterAll(async () => {
-    await ctx.app.close();
+    if (ctx?.app) await ctx.app.close();
   });
 
   it(

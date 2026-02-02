@@ -12,7 +12,7 @@
   "pluginOptions": {},
   "attributes": {
     "accessToken": {
-      "type": "string",
+      "type": "text",
       "required": true,
       "unique": true
     },
@@ -21,7 +21,7 @@
       "required": true
     },
     "refreshToken": {
-      "type": "string",
+      "type": "text",
       "unique": true
     },
     "refreshTokenExpiresAt": {

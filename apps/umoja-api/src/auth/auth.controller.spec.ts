@@ -33,8 +33,8 @@ describe('AuthExampleController', () => {
           provide: AuthExampleService,
           useValue: {
             validateApiKey: jest.fn(),
-            registerClient: jest.fn().mockReturnValue(mockClient),
-            registerUser: jest.fn().mockReturnValue(mockUser),
+            registerClient: jest.fn().mockResolvedValue(mockClient),
+            registerUser: jest.fn().mockResolvedValue(mockUser),
           },
         },
       ],
@@ -56,9 +56,9 @@ describe('AuthExampleController', () => {
   });
 
   describe('createClient', () => {
-    it('validates API key and returns client id and secret', () => {
+    it('validates API key and returns client id and secret', async () => {
       const body = { name: 'test', grants: ['password'] };
-      const result = controller.createClient('valid-key', body);
+      const result = await controller.createClient('valid-key', body);
       expect(service.validateApiKey).toHaveBeenCalledWith('valid-key');
       expect(service.registerClient).toHaveBeenCalledWith(body);
       expect(result).toMatchObject({
@@ -68,17 +68,17 @@ describe('AuthExampleController', () => {
       });
     });
 
-    it('throws when validateApiKey throws', () => {
+    it('throws when validateApiKey throws', async () => {
       (service.validateApiKey as jest.Mock).mockImplementation(() => {
         throw new UnauthorizedException('Invalid API key');
       });
-      expect(() => controller.createClient('bad', { name: 'x' })).toThrow(UnauthorizedException);
+      await expect(controller.createClient('bad', { name: 'x' })).rejects.toThrow(UnauthorizedException);
     });
   });
 
   describe('createUser', () => {
-    it('validates API key and returns user summary', () => {
-      const result = controller.createUser('valid-key', {
+    it('validates API key and returns user summary', async () => {
+      const result = await controller.createUser('valid-key', {
         username: 'alice',
         password: 'secret',
         scopes: ['read'],

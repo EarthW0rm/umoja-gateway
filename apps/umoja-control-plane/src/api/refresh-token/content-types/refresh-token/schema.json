@@ -12,7 +12,7 @@
   "pluginOptions": {},
   "attributes": {
     "refreshToken": {
-      "type": "string",
+      "type": "text",
       "required": true,
       "unique": true
     },

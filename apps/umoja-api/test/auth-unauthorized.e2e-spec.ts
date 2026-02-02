@@ -9,7 +9,7 @@ describe('OAuth unauthorized cases (e2e)', () => {
   });
 
   afterAll(async () => {
-    await ctx.app.close();
+    if (ctx?.app) await ctx.app.close();
   });
 
   it('returns 401 when accessing protected route without bearer token', async () => {

@@ -8,6 +8,15 @@
     "tsConfigPath": "apps/umoja-api/tsconfig.app.json"
   },
   "projects": {
+    "control-plane": {
+      "type": "library",
+      "root": "libs/control-plane",
+      "entryFile": "index",
+      "sourceRoot": "libs/control-plane/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/control-plane/tsconfig.lib.json"
+      }
+    },
     "core": {
       "type": "library",
       "root": "libs/core",

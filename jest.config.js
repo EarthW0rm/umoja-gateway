@@ -17,6 +17,7 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/libs/', '<rootDir>/apps/'],
   moduleNameMapper: {
+    '^@control-plane/control-plane(|/.*)$': '<rootDir>/libs/control-plane/src/$1',
     '^@core/core(|/.*)$': '<rootDir>/libs/core/src/$1',
     '^@oauth/oauth(|/.*)$': '<rootDir>/libs/oauth/src/$1',
   },

@@ -1,16 +1,16 @@
 import { randomBytes } from 'crypto';
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import type {
+  AuthorizationCode,
+  BasicAuthValidationResult,
+  Falsey,
   OAuthClient,
+  OAuthProduct,
   OAuthToken,
   OAuthUser,
   RefreshToken,
-  AuthorizationCode,
-  Falsey,
-  BasicAuthValidationResult,
-  OAuthProduct,
+  AuthRepository,
 } from '@oauth/oauth';
-import type { AuthRepository } from '@oauth/oauth';
 import { AUTH_EXPECTED_API_KEY } from './auth.tokens';
 
 type StoredToken = OAuthToken & { refreshTokenExpiresAt?: Date };
@@ -58,9 +58,7 @@ export class InMemoryAuthRepository implements AuthRepository {
   /**
    * @param expectedApiKey - Expected value for x-api-key header (injected via AUTH_EXPECTED_API_KEY; defaults to 'changeme').
    */
-  constructor(
-    @Optional() @Inject(AUTH_EXPECTED_API_KEY) expectedApiKey?: string,
-  ) {
+  constructor(@Optional() @Inject(AUTH_EXPECTED_API_KEY) expectedApiKey?: string) {
     this.expectedApiKey = expectedApiKey ?? 'changeme';
   }
 
@@ -267,6 +265,17 @@ export class InMemoryAuthRepository implements AuthRepository {
   }
 
   /**
+   * Inserts or updates a product in memory (demo helper, not part of AuthRepository contract).
+   * @param product - Full product payload.
+   * @returns The same product reference (sanitized).
+   */
+  upsertProduct(product: OAuthProduct): OAuthProduct {
+    const sanitized = sanitizeProduct(product);
+    this.products.set(sanitized.id, sanitized);
+    return sanitized;
+  }
+
+  /**
    * Inserts or updates a client in memory (demo helper, not part of AuthRepository contract).
    * @param client - Full client payload.
    * @returns The same client reference.
@@ -331,17 +340,6 @@ export class InMemoryAuthRepository implements AuthRepository {
       return combined;
     }
     return ['umoja-clients'];
-  }
-
-  /**
-   * Inserts or updates a product in memory (demo helper, not part of AuthRepository contract).
-   * @param product - Product payload describing the application container.
-   * @returns The same product reference without embedded clients.
-   */
-  upsertProduct(product: OAuthProduct): OAuthProduct {
-    const sanitized = sanitizeProduct(product);
-    this.products.set(sanitized.id, sanitized);
-    return sanitized;
   }
 
   /**

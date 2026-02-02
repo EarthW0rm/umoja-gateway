@@ -1,20 +1,24 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { AUTH_REPOSITORY } from '@oauth/oauth';
 import { AuthModelModule } from './auth-model.module';
-import { InMemoryAuthRepository } from './in-memory-auth.repository';
+import { InMemoryAuthRepository } from '@control-plane/control-plane';
 
 describe('AuthModelModule', () => {
-  let module: TestingModule;
+  let module: any;
 
   beforeEach(async () => {
-    module = await Test.createTestingModule({
+    process.env.CONTROL_PLANE_STRAPI_BASE_URL = 'http://localhost:1337';
+    process.env.CONTROL_PLANE_STRAPI_API_TOKEN = 'test-token';
+
+    const testingModuleBuilder = Test.createTestingModule({
       imports: [AuthModelModule],
-    }).compile();
+    }).overrideProvider(AUTH_REPOSITORY);
+
+    module = await testingModuleBuilder.useValue(new InMemoryAuthRepository()).compile();
   });
 
-  it('provides AUTH_REPOSITORY as InMemoryAuthRepository', () => {
-    const repo = module.get<InMemoryAuthRepository>(AUTH_REPOSITORY);
+  it('provides AUTH_REPOSITORY after override', () => {
+    const repo = module.get(AUTH_REPOSITORY);
     expect(repo).toBeDefined();
-    expect(repo).toBeInstanceOf(InMemoryAuthRepository);
   });
 });

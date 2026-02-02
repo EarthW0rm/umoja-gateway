@@ -1,0 +1,699 @@
+{
+  "info": {
+    "name": "Umoja OAuth API",
+    "description": "OAuth and auth-demo endpoints for Umoja API.\n\n## Setup\n- **Strapi v5**: When using the control-plane (Strapi), `client_id` must be the **documentId** (e.g. `clxxxxxxxxxxxxxxxxxxxxx`), not a numeric id. Run `npm run seed:oauth` in `apps/umoja-control-plane` and copy the printed **client_id (use in OAuth token requests)** into the environment variable `client_id`.\n- Set `includeControllers: true` in AuthModule for /oauth/token and /oauth/authorize.\n\n## Test scenarios (positive)\n- **API Key**: Create client/user with valid x-api-key → 201; Admin with valid x-api-key → 200; Session with valid Basic auth → 200.\n- **OAuth Token**: Client credentials / Password / Refresh with valid credentials → 200, body has access_token and token_type Bearer.\n- **Protected**: Profile/Me with valid Bearer → 200, body has user; Profile Write with scope write → 200 or 403 if scope missing.\n- **Root**: GET / → 200.\n\n## Test scenarios (negative)\n- **Admin without x-api-key** → 401.\n- **Profile without Authorization** → 401.\n- **Profile with invalid Bearer** → 401.\n- **Token with wrong client_secret** → 401.\n- **Token with wrong password** → 401.\n- **Token with invalid refresh_token** → 401.\n- **Create Client without x-api-key** → 401.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000" },
+    { "key": "api_key", "value": "umoja-api-key-demo" },
+    { "key": "client_id", "value": "PASTE_DOCUMENT_ID_FROM_SEED_OUTPUT" },
+    { "key": "client_secret", "value": "umoja-demo-secret" },
+    { "key": "username", "value": "demo-user" },
+    { "key": "password", "value": "demo-pass" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "redirect_uri", "value": "http://localhost:3000/callback" },
+    { "key": "state", "value": "postman-state" },
+    { "key": "authorization_code", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth (API Key)",
+      "item": [
+        {
+          "name": "Create Client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has clientId and clientSecret', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('clientId');",
+                  "  pm.expect(body).to.have.property('clientSecret');",
+                  "  pm.expect(body.clientId).to.be.a('string');",
+                  "  pm.expect(body.clientSecret).to.be.a('string');",
+                  "});",
+                  "pm.test('Response has grants array', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('grants');",
+                  "  pm.expect(body.grants).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-api-key", "value": "{{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"postman-client\",\n  \"grants\": [\"password\", \"client_credentials\", \"refresh_token\"],\n  \"redirectUris\": [\"http://localhost:3000/callback\"],\n  \"scopes\": [\"read\"],\n  \"audiences\": [\"umoja-clients\"]\n}"
+            },
+            "url": "{{base_url}}/auth-demo/clients",
+            "description": "Scenario: Valid x-api-key → 201, body has clientId, clientSecret, grants."
+          }
+        },
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has user with id and username', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('user');",
+                  "  pm.expect(body.user).to.have.property('username');",
+                  "  pm.expect(body.user.username).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-api-key", "value": "{{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"postman-user\",\n  \"password\": \"postman-pass\",\n  \"scopes\": [\"read\", \"write\"]\n}"
+            },
+            "url": "{{base_url}}/auth-demo/users",
+            "description": "Scenario: Valid x-api-key → 201, body has user with username."
+          }
+        },
+        {
+          "name": "Admin (API Key)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response indicates API key valid', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body.message).to.include('API key');",
+                  "  pm.expect(body).to.have.property('role', 'admin');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-api-key", "value": "{{api_key}}", "type": "text" }],
+            "url": "{{base_url}}/auth-demo/admin",
+            "description": "Scenario: Valid x-api-key → 200, body has message and role admin."
+          }
+        },
+        {
+          "name": "Session (Basic Auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has user and Basic auth valid message', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('user');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body.message).to.include('Basic');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/auth-demo/session",
+            "description": "Scenario: Valid Basic auth (demo-user / demo-pass) → 200, body has user and message."
+          }
+        }
+      ]
+    },
+    {
+      "name": "OAuth Token",
+      "description": "Run **Token - Password** first to obtain `refresh_token` (saved to environment). **Token - Refresh** requires that value; client_credentials does not return refresh_token.\n\nRecommended order: 1) Token - Client Credentials (optional), 2) Token - Password, 3) Token - Refresh.",
+      "item": [
+        {
+          "name": "Token - Client Credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has access_token and token_type Bearer', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('access_token');",
+                  "  pm.expect(body.access_token).to.be.a('string');",
+                  "  pm.expect(body).to.have.property('token_type', 'Bearer');",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.environment.set('access_token', json.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded", "type": "text" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "client_credentials" },
+                { "key": "client_id", "value": "{{client_id}}" },
+                { "key": "client_secret", "value": "{{client_secret}}" }
+              ]
+            },
+            "url": "{{base_url}}/oauth/token",
+            "description": "Scenario: Valid client_id (Strapi v5: use documentId from seed) + client_secret → 200, body has access_token and token_type Bearer."
+          }
+        },
+        {
+          "name": "Token - Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has access_token, refresh_token and token_type Bearer', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('access_token');",
+                  "  pm.expect(body).to.have.property('refresh_token');",
+                  "  pm.expect(body).to.have.property('token_type', 'Bearer');",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.environment.set('access_token', json.access_token);",
+                  "  if (json.refresh_token) pm.environment.set('refresh_token', json.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded", "type": "text" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password" },
+                { "key": "username", "value": "{{username}}" },
+                { "key": "password", "value": "{{password}}" },
+                { "key": "client_id", "value": "{{client_id}}" },
+                { "key": "client_secret", "value": "{{client_secret}}" }
+              ]
+            },
+            "url": "{{base_url}}/oauth/token",
+            "description": "Scenario: Valid username + password + client_id (Strapi v5: documentId from seed) → 200, body has access_token and refresh_token."
+          }
+        },
+        {
+          "name": "Token - Refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has access_token and token_type Bearer', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('access_token');",
+                  "  pm.expect(body).to.have.property('token_type', 'Bearer');",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.environment.set('access_token', json.access_token);",
+                  "  if (json.refresh_token) pm.environment.set('refresh_token', json.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded", "type": "text" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "refresh_token" },
+                { "key": "refresh_token", "value": "{{refresh_token}}" },
+                { "key": "client_id", "value": "{{client_id}}" },
+                { "key": "client_secret", "value": "{{client_secret}}" }
+              ]
+            },
+            "url": "{{base_url}}/oauth/token",
+            "description": "Scenario: Valid refresh_token + client_id → 200, new access_token (and new refresh_token). Use a refresh_token from **Token - Password** (saved to env); client_credentials does not issue refresh_token. Run Token - Password before this request."
+          }
+        }
+      ]
+    },
+    {
+      "name": "OAuth Authorization Code",
+      "description": "Two-step flow: 1) **Authorize (get code)** – GET /oauth/authorize with Basic auth (resource owner). Server redirects (302) to redirect_uri with ?code=...&state=...; the Test script saves the code to `authorization_code`. 2) **Token - Authorization Code** – POST /oauth/token to exchange the code for access_token and refresh_token. Run Authorize first; ensure client has grant authorization_code and redirectUris includes {{redirect_uri}} (e.g. http://localhost:3000/callback).",
+      "item": [
+        {
+          "name": "Authorize (get code)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 302 Redirect', () => pm.response.to.have.status(302));",
+                  "const loc = pm.response.headers.get('Location');",
+                  "pm.test('Location has code and state', () => {",
+                  "  pm.expect(loc).to.be.a('string');",
+                  "  pm.expect(loc).to.include('code=');",
+                  "});",
+                  "if (loc && loc.includes('code=')) {",
+                  "  const match = loc.match(/code=([^&]+)/);",
+                  "  if (match) pm.environment.set('authorization_code', decodeURIComponent(match[1]));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "{{username}}", "type": "string" },
+                { "key": "password", "value": "{{password}}", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/oauth/authorize?response_type=code&client_id={{client_id}}&redirect_uri={{redirect_uri}}&state={{state}}",
+              "host": ["{{base_url}}"],
+              "path": ["oauth", "authorize"],
+              "query": [
+                { "key": "response_type", "value": "code" },
+                { "key": "client_id", "value": "{{client_id}}" },
+                { "key": "redirect_uri", "value": "{{redirect_uri}}" },
+                { "key": "state", "value": "{{state}}" }
+              ]
+            },
+            "description": "Scenario: Resource owner (Basic auth) requests authorization. Server responds 302 with Location: redirect_uri?code=...&state=...; Test script parses the code and saves it to authorization_code. Disable 'Automatically follow redirects' for this request (Request → Settings) so the 302 response is returned and the script can read the Location header. Client must have grant authorization_code and redirectUris including {{redirect_uri}} (e.g. http://localhost:3000/callback)."
+          }
+        },
+        {
+          "name": "Token - Authorization Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has access_token, refresh_token and token_type Bearer', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('access_token');",
+                  "  pm.expect(body).to.have.property('refresh_token');",
+                  "  pm.expect(body).to.have.property('token_type', 'Bearer');",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.environment.set('access_token', json.access_token);",
+                  "  if (json.refresh_token) pm.environment.set('refresh_token', json.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded", "type": "text" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "authorization_code" },
+                { "key": "code", "value": "{{authorization_code}}" },
+                { "key": "redirect_uri", "value": "{{redirect_uri}}" },
+                { "key": "client_id", "value": "{{client_id}}" },
+                { "key": "client_secret", "value": "{{client_secret}}" }
+              ]
+            },
+            "url": "{{base_url}}/oauth/token",
+            "description": "Scenario: Exchange authorization code for tokens. Run **Authorize (get code)** first so authorization_code is set. redirect_uri must match the one used in the authorize step."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Protected (Bearer)",
+      "item": [
+        {
+          "name": "Profile (any token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has user and scopes', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('user');",
+                  "  pm.expect(body).to.have.property('scopes');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": "{{base_url}}/auth-demo/profile",
+            "description": "Scenario: Valid Bearer token → 200, body has user and scopes."
+          }
+        },
+        {
+          "name": "Profile Write (scope write)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(code));",
+                  "if (code === 200) {",
+                  "  pm.test('Response has write scope message', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('message');",
+                  "    pm.expect(body.message).to.include('write');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": "{{base_url}}/auth-demo/profile/write",
+            "description": "Scenario: Valid Bearer with scope write → 200; missing scope → 403."
+          }
+        },
+        {
+          "name": "Me (optional auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has authenticated flag and user/scopes', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('authenticated');",
+                  "  pm.expect(body).to.have.property('user');",
+                  "  pm.expect(body).to.have.property('scopes');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}", "type": "text" }],
+            "url": "{{base_url}}/auth-demo/me",
+            "description": "Scenario: With valid Bearer → 200, authenticated true and user/scopes present."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Root",
+      "item": [
+        {
+          "name": "Health / Root",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/",
+            "description": "Scenario: No auth required → 200."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test Scenarios (Negative)",
+      "description": "Validates error responses: 401 Unauthorized when auth is missing or invalid.",
+      "item": [
+        {
+          "name": "[Negative] Admin without x-api-key → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 Unauthorized', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/auth-demo/admin",
+            "description": "Scenario: Request without x-api-key header → 401."
+          }
+        },
+        {
+          "name": "[Negative] Create Client without x-api-key → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 Unauthorized', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json", "type": "text" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"test\",\n  \"grants\": [\"client_credentials\"]\n}"
+            },
+            "url": "{{base_url}}/auth-demo/clients",
+            "description": "Scenario: POST without x-api-key → 401."
+          }
+        },
+        {
+          "name": "[Negative] Profile without Authorization → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 Unauthorized', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/auth-demo/profile",
+            "description": "Scenario: GET protected route without Bearer → 401."
+          }
+        },
+        {
+          "name": "[Negative] Profile with invalid Bearer → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 Unauthorized', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer invalid-token-here", "type": "text" }],
+            "url": "{{base_url}}/auth-demo/profile",
+            "description": "Scenario: Valid Bearer format but invalid token → 401."
+          }
+        },
+        {
+          "name": "[Negative] Token - wrong client_secret → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 or 401', () => pm.expect([400, 401]).to.include(pm.response.code));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded", "type": "text" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "client_credentials" },
+                { "key": "client_id", "value": "{{client_id}}" },
+                { "key": "client_secret", "value": "wrong-secret" }
+              ]
+            },
+            "url": "{{base_url}}/oauth/token",
+            "description": "Scenario: Valid client_id but wrong client_secret → 400 or 401."
+          }
+        },
+        {
+          "name": "[Negative] Token - wrong password → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 or 401', () => pm.expect([400, 401]).to.include(pm.response.code));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded", "type": "text" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password" },
+                { "key": "username", "value": "{{username}}" },
+                { "key": "password", "value": "wrong-password" },
+                { "key": "client_id", "value": "{{client_id}}" },
+                { "key": "client_secret", "value": "{{client_secret}}" }
+              ]
+            },
+            "url": "{{base_url}}/oauth/token",
+            "description": "Scenario: Valid client but wrong user password → 400 or 401."
+          }
+        },
+        {
+          "name": "[Negative] Token - invalid refresh_token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 or 401', () => pm.expect([400, 401]).to.include(pm.response.code));",
+                  "if (pm.response.code === 400) {",
+                  "  const body = pm.response.json();",
+                  "  if (body && body.error) pm.test('Error is invalid_grant', () => pm.expect(body.error).to.eql('invalid_grant'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded", "type": "text" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "refresh_token" },
+                { "key": "refresh_token", "value": "invalid-refresh-token" },
+                { "key": "client_id", "value": "{{client_id}}" },
+                { "key": "client_secret", "value": "{{client_secret}}" }
+              ]
+            },
+            "url": "{{base_url}}/oauth/token",
+            "description": "Scenario: Invalid or expired refresh_token → 400 or 401 (error: invalid_grant)."
+          }
+        },
+        {
+          "name": "[Negative] Token - invalid authorization code → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 or 401', () => pm.expect([400, 401]).to.include(pm.response.code));",
+                  "if (pm.response.code === 400) {",
+                  "  const body = pm.response.json();",
+                  "  if (body && body.error) pm.test('Error is invalid_grant', () => pm.expect(body.error).to.eql('invalid_grant'));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded", "type": "text" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "authorization_code" },
+                { "key": "code", "value": "invalid-authorization-code" },
+                { "key": "redirect_uri", "value": "{{redirect_uri}}" },
+                { "key": "client_id", "value": "{{client_id}}" },
+                { "key": "client_secret", "value": "{{client_secret}}" }
+              ]
+            },
+            "url": "{{base_url}}/oauth/token",
+            "description": "Scenario: Invalid or expired authorization code → 400 or 401 (error: invalid_grant)."
+          }
+        }
+      ]
+    }
+  ]
+}

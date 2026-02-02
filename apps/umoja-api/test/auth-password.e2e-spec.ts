@@ -9,7 +9,7 @@ describe('OAuth password grant (e2e)', () => {
   });
 
   afterAll(async () => {
-    await ctx.app.close();
+    if (ctx?.app) await ctx.app.close();
   });
 
   it(

@@ -1,21 +1,40 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AUTH_REPOSITORY } from '@oauth/oauth';
-import { AUTH_EXPECTED_API_KEY } from './auth.tokens';
-import { InMemoryAuthRepository } from './in-memory-auth.repository';
+import {
+  ControlPlaneStrapiModule,
+  ControlPlaneInMemoryModule,
+  InMemoryAuthRepository,
+  StrapiOAuthRepository,
+} from '@control-plane/control-plane';
+
+const useInMemory =
+  process.env.USE_IN_MEMORY_AUTH === 'true' || process.env.NODE_ENV === 'test';
 
 /**
  * Module that provides the OAuth repository implementation (AUTH_REPOSITORY).
- * Uses InMemoryAuthRepository for demo; replace with a persistent implementation for production.
- * AUTH_EXPECTED_API_KEY defaults to 'changeme'; provide from ConfigService in production.
+ * Wires the Strapi-backed or in-memory repository from the control plane.
+ * Declares AUTH_REPOSITORY as a local provider (useExisting) so Nest validates exports.
  */
 @Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    useInMemory
+      ? ControlPlaneInMemoryModule.register(process.env.AUTH_EXPECTED_API_KEY ?? 'changeme')
+      : ControlPlaneStrapiModule.registerAsync({
+          imports: [ConfigModule],
+          inject: [ConfigService],
+          useFactory: (config: ConfigService) => ({
+            baseUrl: config.getOrThrow<string>('CONTROL_PLANE_STRAPI_BASE_URL'),
+            apiToken: config.getOrThrow<string>('CONTROL_PLANE_STRAPI_API_TOKEN'),
+            timeoutMs: config.get<number>('CONTROL_PLANE_HTTP_TIMEOUT') ?? 5000,
+          }),
+        }),
+  ],
   providers: [
-    { provide: AUTH_EXPECTED_API_KEY, useValue: 'changeme' },
-    InMemoryAuthRepository,
-    {
-      provide: AUTH_REPOSITORY,
-      useExisting: InMemoryAuthRepository,
-    },
+    useInMemory
+      ? { provide: AUTH_REPOSITORY, useExisting: InMemoryAuthRepository }
+      : { provide: AUTH_REPOSITORY, useExisting: StrapiOAuthRepository },
   ],
   exports: [AUTH_REPOSITORY],
 })
