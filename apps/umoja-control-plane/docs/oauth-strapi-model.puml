@@ -20,7 +20,7 @@ class "api::oauth-client.oauth-client" as client <<collectionType>> {
   --
   product : relation manyToOne oauth-product
   user : relation manyToOne oauth-user
-  audiences : relation manyToMany audience
+  audiences : relation manyToMany oauth-audience
 }
 
 class "api::oauth-product.oauth-product" as product <<collectionType>> {
@@ -42,10 +42,10 @@ class "api::oauth-user.oauth-user" as user <<collectionType>> {
   username : string
   password : string
   --
-  audiences : relation manyToMany audience
+  audiences : relation manyToMany oauth-audience
 }
 
-class "api::audience.audience" as audience <<collectionType>> {
+class "api::oauth-audience.oauth-audience" as oauth_audience <<collectionType>> {
   info: singularName pluralName displayName
   --
   value : string
@@ -65,7 +65,7 @@ class "api::oauth-token.oauth-token" as token <<collectionType>> {
   user : relation manyToOne oauth-user
 }
 
-class "api::refresh-token.refresh-token" as refresh <<collectionType>> {
+class "api::oauth-refresh-token.oauth-refresh-token" as refresh <<collectionType>> {
   info: singularName pluralName displayName
   --
   refreshToken : string
@@ -76,7 +76,7 @@ class "api::refresh-token.refresh-token" as refresh <<collectionType>> {
   user : relation manyToOne oauth-user
 }
 
-class "api::authorization-code.authorization-code" as authz <<collectionType>> {
+class "api::oauth-authorization-code.oauth-authorization-code" as authz <<collectionType>> {
   info: singularName pluralName displayName
   --
   authorizationCode : string
@@ -90,7 +90,7 @@ class "api::authorization-code.authorization-code" as authz <<collectionType>> {
   user : relation manyToOne oauth-user
 }
 
-class "api::api-key.api-key" as apikey <<collectionType>> {
+class "api::oauth-api-key.oauth-api-key" as apikey <<collectionType>> {
   info: singularName pluralName displayName
   --
   apiKey : string
@@ -106,8 +106,8 @@ user ||--o{ refresh : refreshTokens
 client ||--o{ authz : authorizationCodes
 user ||--o{ authz : authorizationCodes
 
-client "*" -- "*" audience : audiences
-user "*" -- "*" audience : audiences
+client "*" -- "*" oauth_audience : audiences
+user "*" -- "*" oauth_audience : audiences
 
 client ||--o{ apikey : apiKeys
 product ||--o{ client : clients

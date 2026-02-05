@@ -272,14 +272,14 @@ export class StrapiOAuthRepository implements AuthRepository {
         },
       };
       await this.request<StrapiSingleResponse<StrapiRefreshTokenAttributes>>(
-        'refresh-tokens',
+        'oauth-refresh-tokens',
         {
           method: 'POST',
           body: JSON.stringify(refreshPayload),
         },
         undefined,
         {
-          requestLabel: 'POST refresh-tokens (saveToken)',
+          requestLabel: 'POST oauth-refresh-tokens (saveToken)',
           requestBody: refreshPayload,
         },
       );
@@ -327,7 +327,7 @@ export class StrapiOAuthRepository implements AuthRepository {
 
   async getRefreshToken(refreshToken: string): Promise<RefreshToken | Falsey> {
     const response = await this.request<StrapiCollectionResponse<StrapiRefreshTokenAttributes>>(
-      'refresh-tokens',
+      'oauth-refresh-tokens',
       undefined,
       {
         'filters[refreshToken][$eq]': refreshToken,
@@ -349,7 +349,7 @@ export class StrapiOAuthRepository implements AuthRepository {
       return false;
     }
     const entity = await this.request<StrapiCollectionResponse<StrapiRefreshTokenAttributes>>(
-      'refresh-tokens',
+      'oauth-refresh-tokens',
       undefined,
       {
         'filters[refreshToken][$eq]': token.refreshToken,
@@ -360,7 +360,7 @@ export class StrapiOAuthRepository implements AuthRepository {
       return false;
     }
     const documentId = this.getDocId(found);
-    await this.request<unknown>(`refresh-tokens/${documentId}`, { method: 'DELETE' }, undefined);
+    await this.request<unknown>(`oauth-refresh-tokens/${documentId}`, { method: 'DELETE' }, undefined);
     return true;
   }
 
@@ -378,7 +378,7 @@ export class StrapiOAuthRepository implements AuthRepository {
 
   async getAuthorizationCode(code: string): Promise<AuthorizationCode | Falsey> {
     const response = await this.request<StrapiCollectionResponse<StrapiAuthorizationCodeAttributes>>(
-      'authorization-codes',
+      'oauth-authorization-codes',
       undefined,
       {
         'filters[authorizationCode][$eq]': code,
@@ -415,10 +415,10 @@ export class StrapiOAuthRepository implements AuthRepository {
       },
     };
     await this.request<StrapiSingleResponse<StrapiAuthorizationCodeAttributes>>(
-      'authorization-codes',
+      'oauth-authorization-codes',
       { method: 'POST', body: JSON.stringify(payload) },
       undefined,
-      { requestLabel: 'POST authorization-codes', requestBody: payload },
+      { requestLabel: 'POST oauth-authorization-codes', requestBody: payload },
     );
 
     return {
@@ -430,7 +430,7 @@ export class StrapiOAuthRepository implements AuthRepository {
 
   async revokeAuthorizationCode(code: AuthorizationCode): Promise<boolean> {
     const response = await this.request<StrapiCollectionResponse<StrapiAuthorizationCodeAttributes>>(
-      'authorization-codes',
+      'oauth-authorization-codes',
       undefined,
       {
         'filters[authorizationCode][$eq]': code.authorizationCode,
@@ -440,7 +440,7 @@ export class StrapiOAuthRepository implements AuthRepository {
     if (!entity) {
       return false;
     }
-    await this.request<unknown>(`authorization-codes/${this.getDocId(entity)}`, { method: 'DELETE' }, undefined);
+    await this.request<unknown>(`oauth-authorization-codes/${this.getDocId(entity)}`, { method: 'DELETE' }, undefined);
     return true;
   }
 
@@ -622,7 +622,7 @@ export class StrapiOAuthRepository implements AuthRepository {
     const ids: string[] = [];
     for (const value of values) {
       const response = await this.request<StrapiCollectionResponse<StrapiAudienceAttributes>>(
-        'audiences',
+        'oauth-audiences',
         undefined,
         { 'filters[value][$eq]': value, 'pagination[pageSize]': 1 },
       );
@@ -1038,7 +1038,7 @@ export class StrapiOAuthRepository implements AuthRepository {
     this.apiKeyCacheLoading = true;
     try {
       const response = await this.request<StrapiCollectionResponse<StrapiApiKeyAttributes>>(
-        'api-keys',
+        'oauth-api-keys',
         undefined,
         {
           populate: 'client',

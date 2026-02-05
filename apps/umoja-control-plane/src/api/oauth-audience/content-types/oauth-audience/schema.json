@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "oauth_audiences",
+  "info": {
+    "singularName": "oauth-audience",
+    "pluralName": "oauth-audiences",
+    "displayName": "OAuth Audience"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "value": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "clients": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::oauth-client.oauth-client",
+      "mappedBy": "audiences"
+    },
+    "users": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::oauth-user.oauth-user",
+      "mappedBy": "audiences"
+    }
+  }
+}

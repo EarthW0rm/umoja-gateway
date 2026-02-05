@@ -1,0 +1,29 @@
+{
+  "kind": "collectionType",
+  "collectionName": "oauth_api_keys",
+  "info": {
+    "singularName": "oauth-api-key",
+    "pluralName": "oauth-api-keys",
+    "displayName": "OAuth API Key"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "apiKey": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "client": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::oauth-client.oauth-client",
+      "inversedBy": "apiKeys"
+    }
+  }
+}

@@ -46,7 +46,7 @@
     "audiences": {
       "type": "relation",
       "relation": "manyToMany",
-      "target": "api::audience.audience",
+      "target": "api::oauth-audience.oauth-audience",
       "inversedBy": "clients"
     },
     "tokens": {
@@ -58,19 +58,19 @@
     "refreshTokens": {
       "type": "relation",
       "relation": "oneToMany",
-      "target": "api::refresh-token.refresh-token",
+      "target": "api::oauth-refresh-token.oauth-refresh-token",
       "mappedBy": "client"
     },
     "authorizationCodes": {
       "type": "relation",
       "relation": "oneToMany",
-      "target": "api::authorization-code.authorization-code",
+      "target": "api::oauth-authorization-code.oauth-authorization-code",
       "mappedBy": "client"
     },
     "apiKeys": {
       "type": "relation",
       "relation": "oneToMany",
-      "target": "api::api-key.api-key",
+      "target": "api::oauth-api-key.oauth-api-key",
       "mappedBy": "client"
     }
   }

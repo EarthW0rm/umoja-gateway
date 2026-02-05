@@ -145,7 +145,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{base_url}}/api/audiences"
+            "url": "{{base_url}}/api/oauth-audiences"
           }
         },
         {

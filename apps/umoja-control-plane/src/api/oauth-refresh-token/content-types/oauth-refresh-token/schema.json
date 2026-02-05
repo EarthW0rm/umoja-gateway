@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "oauth_refresh_tokens",
+  "info": {
+    "singularName": "oauth-refresh-token",
+    "pluralName": "oauth-refresh-tokens",
+    "displayName": "OAuth Refresh Token"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "refreshToken": {
+      "type": "text",
+      "required": true,
+      "unique": true
+    },
+    "refreshTokenExpiresAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "scope": {
+      "type": "json"
+    },
+    "client": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::oauth-client.oauth-client",
+      "inversedBy": "refreshTokens"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::oauth-user.oauth-user",
+      "inversedBy": "refreshTokens"
+    }
+  }
+}

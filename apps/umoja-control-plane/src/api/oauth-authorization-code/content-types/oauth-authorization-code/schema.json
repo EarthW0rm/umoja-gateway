@@ -1,0 +1,49 @@
+{
+  "kind": "collectionType",
+  "collectionName": "oauth_authorization_codes",
+  "info": {
+    "singularName": "oauth-authorization-code",
+    "pluralName": "oauth-authorization-codes",
+    "displayName": "OAuth Authorization Code"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "authorizationCode": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "expiresAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "redirectUri": {
+      "type": "string",
+      "required": true
+    },
+    "scope": {
+      "type": "json"
+    },
+    "codeChallenge": {
+      "type": "string"
+    },
+    "codeChallengeMethod": {
+      "type": "string"
+    },
+    "client": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::oauth-client.oauth-client",
+      "inversedBy": "authorizationCodes"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::oauth-user.oauth-user",
+      "inversedBy": "authorizationCodes"
+    }
+  }
+}

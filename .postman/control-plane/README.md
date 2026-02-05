@@ -38,7 +38,7 @@ Collection and environment to test the Strapi-based control plane API locally (O
 ## Folders
 
 - **Health & Admin** – Server root (GET /).
-- **OAuth (Control Plane)** – List oauth-clients, oauth-users, oauth-products, audiences, api-keys.
+- **OAuth (Control Plane)** – List oauth-clients, oauth-users, oauth-products, oauth-audiences, api-keys.
 - **Content types** – About (single), articles, authors, categories, global (single).
 - **Test Scenarios (Negative)** – No auth / invalid documentId; expect 403 or 404.
 

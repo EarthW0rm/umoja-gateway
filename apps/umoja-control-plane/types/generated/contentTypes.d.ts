@@ -402,121 +402,6 @@ export interface ApiAboutAbout extends Struct.SingleTypeSchema {
   };
 }
 
-export interface ApiApiKeyApiKey extends Struct.CollectionTypeSchema {
-  collectionName: 'api_keys';
-  info: {
-    displayName: 'API Key';
-    pluralName: 'api-keys';
-    singularName: 'api-key';
-  };
-  options: {
-    draftAndPublish: false;
-  };
-  attributes: {
-    apiKey: Schema.Attribute.String &
-      Schema.Attribute.Required &
-      Schema.Attribute.Unique;
-    client: Schema.Attribute.Relation<
-      'manyToOne',
-      'api::oauth-client.oauth-client'
-    >;
-    createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    description: Schema.Attribute.Text;
-    locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::api-key.api-key'
-    > &
-      Schema.Attribute.Private;
-    publishedAt: Schema.Attribute.DateTime;
-    updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-  };
-}
-
-export interface ApiAudienceAudience extends Struct.CollectionTypeSchema {
-  collectionName: 'audiences';
-  info: {
-    displayName: 'Audience';
-    pluralName: 'audiences';
-    singularName: 'audience';
-  };
-  options: {
-    draftAndPublish: false;
-  };
-  attributes: {
-    clients: Schema.Attribute.Relation<
-      'manyToMany',
-      'api::oauth-client.oauth-client'
-    >;
-    createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    description: Schema.Attribute.Text;
-    locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::audience.audience'
-    > &
-      Schema.Attribute.Private;
-    publishedAt: Schema.Attribute.DateTime;
-    updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    users: Schema.Attribute.Relation<
-      'manyToMany',
-      'api::oauth-user.oauth-user'
-    >;
-    value: Schema.Attribute.String &
-      Schema.Attribute.Required &
-      Schema.Attribute.Unique;
-  };
-}
-
-export interface ApiAuthorizationCodeAuthorizationCode
-  extends Struct.CollectionTypeSchema {
-  collectionName: 'authorization_codes';
-  info: {
-    displayName: 'Authorization Code';
-    pluralName: 'authorization-codes';
-    singularName: 'authorization-code';
-  };
-  options: {
-    draftAndPublish: false;
-  };
-  attributes: {
-    authorizationCode: Schema.Attribute.String &
-      Schema.Attribute.Required &
-      Schema.Attribute.Unique;
-    client: Schema.Attribute.Relation<
-      'manyToOne',
-      'api::oauth-client.oauth-client'
-    >;
-    codeChallenge: Schema.Attribute.String;
-    codeChallengeMethod: Schema.Attribute.String;
-    createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    expiresAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
-    locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::authorization-code.authorization-code'
-    > &
-      Schema.Attribute.Private;
-    publishedAt: Schema.Attribute.DateTime;
-    redirectUri: Schema.Attribute.String & Schema.Attribute.Required;
-    scope: Schema.Attribute.JSON;
-    updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    user: Schema.Attribute.Relation<'manyToOne', 'api::oauth-user.oauth-user'>;
-  };
-}
-
 export interface ApiGlobalGlobal extends Struct.SingleTypeSchema {
   collectionName: 'globals';
   info: {
@@ -549,6 +434,122 @@ export interface ApiGlobalGlobal extends Struct.SingleTypeSchema {
   };
 }
 
+export interface ApiOauthApiKeyOauthApiKey extends Struct.CollectionTypeSchema {
+  collectionName: 'oauth_api_keys';
+  info: {
+    displayName: 'OAuth API Key';
+    pluralName: 'oauth-api-keys';
+    singularName: 'oauth-api-key';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    apiKey: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    client: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::oauth-client.oauth-client'
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::oauth-api-key.oauth-api-key'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiOauthAudienceOauthAudience
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'oauth_audiences';
+  info: {
+    displayName: 'OAuth Audience';
+    pluralName: 'oauth-audiences';
+    singularName: 'oauth-audience';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    clients: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::oauth-client.oauth-client'
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::oauth-audience.oauth-audience'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    users: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::oauth-user.oauth-user'
+    >;
+    value: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+  };
+}
+
+export interface ApiOauthAuthorizationCodeOauthAuthorizationCode
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'oauth_authorization_codes';
+  info: {
+    displayName: 'OAuth Authorization Code';
+    pluralName: 'oauth-authorization-codes';
+    singularName: 'oauth-authorization-code';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    authorizationCode: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    client: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::oauth-client.oauth-client'
+    >;
+    codeChallenge: Schema.Attribute.String;
+    codeChallengeMethod: Schema.Attribute.String;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    expiresAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::oauth-authorization-code.oauth-authorization-code'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    redirectUri: Schema.Attribute.String & Schema.Attribute.Required;
+    scope: Schema.Attribute.JSON;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    user: Schema.Attribute.Relation<'manyToOne', 'api::oauth-user.oauth-user'>;
+  };
+}
+
 export interface ApiOauthClientOauthClient extends Struct.CollectionTypeSchema {
   collectionName: 'oauth_clients';
   info: {
@@ -561,14 +562,17 @@ export interface ApiOauthClientOauthClient extends Struct.CollectionTypeSchema {
   };
   attributes: {
     accessTokenLifetime: Schema.Attribute.Integer & Schema.Attribute.Required;
-    apiKeys: Schema.Attribute.Relation<'oneToMany', 'api::api-key.api-key'>;
+    apiKeys: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::oauth-api-key.oauth-api-key'
+    >;
     audiences: Schema.Attribute.Relation<
       'manyToMany',
-      'api::audience.audience'
+      'api::oauth-audience.oauth-audience'
     >;
     authorizationCodes: Schema.Attribute.Relation<
       'oneToMany',
-      'api::authorization-code.authorization-code'
+      'api::oauth-authorization-code.oauth-authorization-code'
     >;
     clientSecret: Schema.Attribute.String & Schema.Attribute.Required;
     createdAt: Schema.Attribute.DateTime;
@@ -590,7 +594,7 @@ export interface ApiOauthClientOauthClient extends Struct.CollectionTypeSchema {
     refreshTokenLifetime: Schema.Attribute.Integer & Schema.Attribute.Required;
     refreshTokens: Schema.Attribute.Relation<
       'oneToMany',
-      'api::refresh-token.refresh-token'
+      'api::oauth-refresh-token.oauth-refresh-token'
     >;
     tokens: Schema.Attribute.Relation<
       'oneToMany',
@@ -640,6 +644,45 @@ export interface ApiOauthProductOauthProduct
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+  };
+}
+
+export interface ApiOauthRefreshTokenOauthRefreshToken
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'oauth_refresh_tokens';
+  info: {
+    displayName: 'OAuth Refresh Token';
+    pluralName: 'oauth-refresh-tokens';
+    singularName: 'oauth-refresh-token';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    client: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::oauth-client.oauth-client'
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::oauth-refresh-token.oauth-refresh-token'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    refreshToken: Schema.Attribute.Text &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    refreshTokenExpiresAt: Schema.Attribute.DateTime &
+      Schema.Attribute.Required;
+    scope: Schema.Attribute.JSON;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    user: Schema.Attribute.Relation<'manyToOne', 'api::oauth-user.oauth-user'>;
   };
 }
 
@@ -695,11 +738,11 @@ export interface ApiOauthUserOauthUser extends Struct.CollectionTypeSchema {
   attributes: {
     audiences: Schema.Attribute.Relation<
       'manyToMany',
-      'api::audience.audience'
+      'api::oauth-audience.oauth-audience'
     >;
     authorizationCodes: Schema.Attribute.Relation<
       'oneToMany',
-      'api::authorization-code.authorization-code'
+      'api::oauth-authorization-code.oauth-authorization-code'
     >;
     clients: Schema.Attribute.Relation<
       'oneToMany',
@@ -718,7 +761,7 @@ export interface ApiOauthUserOauthUser extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     refreshTokens: Schema.Attribute.Relation<
       'oneToMany',
-      'api::refresh-token.refresh-token'
+      'api::oauth-refresh-token.oauth-refresh-token'
     >;
     tokens: Schema.Attribute.Relation<
       'oneToMany',
@@ -730,45 +773,6 @@ export interface ApiOauthUserOauthUser extends Struct.CollectionTypeSchema {
     username: Schema.Attribute.String &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
-  };
-}
-
-export interface ApiRefreshTokenRefreshToken
-  extends Struct.CollectionTypeSchema {
-  collectionName: 'refresh_tokens';
-  info: {
-    displayName: 'Refresh Token';
-    pluralName: 'refresh-tokens';
-    singularName: 'refresh-token';
-  };
-  options: {
-    draftAndPublish: false;
-  };
-  attributes: {
-    client: Schema.Attribute.Relation<
-      'manyToOne',
-      'api::oauth-client.oauth-client'
-    >;
-    createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::refresh-token.refresh-token'
-    > &
-      Schema.Attribute.Private;
-    publishedAt: Schema.Attribute.DateTime;
-    refreshToken: Schema.Attribute.Text &
-      Schema.Attribute.Required &
-      Schema.Attribute.Unique;
-    refreshTokenExpiresAt: Schema.Attribute.DateTime &
-      Schema.Attribute.Required;
-    scope: Schema.Attribute.JSON;
-    updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    user: Schema.Attribute.Relation<'manyToOne', 'api::oauth-user.oauth-user'>;
   };
 }
 
@@ -1282,15 +1286,15 @@ declare module '@strapi/strapi' {
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
       'api::about.about': ApiAboutAbout;
-      'api::api-key.api-key': ApiApiKeyApiKey;
-      'api::audience.audience': ApiAudienceAudience;
-      'api::authorization-code.authorization-code': ApiAuthorizationCodeAuthorizationCode;
       'api::global.global': ApiGlobalGlobal;
+      'api::oauth-api-key.oauth-api-key': ApiOauthApiKeyOauthApiKey;
+      'api::oauth-audience.oauth-audience': ApiOauthAudienceOauthAudience;
+      'api::oauth-authorization-code.oauth-authorization-code': ApiOauthAuthorizationCodeOauthAuthorizationCode;
       'api::oauth-client.oauth-client': ApiOauthClientOauthClient;
       'api::oauth-product.oauth-product': ApiOauthProductOauthProduct;
+      'api::oauth-refresh-token.oauth-refresh-token': ApiOauthRefreshTokenOauthRefreshToken;
       'api::oauth-token.oauth-token': ApiOauthTokenOauthToken;
       'api::oauth-user.oauth-user': ApiOauthUserOauthUser;
-      'api::refresh-token.refresh-token': ApiRefreshTokenRefreshToken;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;
       'plugin::i18n.locale': PluginI18NLocale;

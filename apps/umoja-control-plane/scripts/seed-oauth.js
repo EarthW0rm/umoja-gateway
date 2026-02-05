@@ -22,7 +22,7 @@ async function seedOAuth() {
   console.log('Seeding OAuth control plane data (idempotent)...');
 
   const audience = await createIfMissing(
-    'api::audience.audience',
+    'api::oauth-audience.oauth-audience',
     { value: 'umoja-clients' },
     {
       value: 'umoja-clients',
@@ -86,7 +86,7 @@ async function seedOAuth() {
   const client = clientDoc ?? (await strapi.db.query('api::oauth-client.oauth-client').findOne({ where: { clientSecret: DEMO_CLIENT_SECRET } }));
 
   await createIfMissing(
-    'api::api-key.api-key',
+    'api::oauth-api-key.oauth-api-key',
     { apiKey: DEMO_API_KEY },
     {
       apiKey: DEMO_API_KEY,
