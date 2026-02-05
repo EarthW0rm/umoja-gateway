@@ -32,11 +32,13 @@
     "test:e2e": "jest --config ./apps/umoja-api/test/jest-e2e.json"
   },
   "dependencies": {
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-fastify": "^11.1.12",
+    "axios": "^1.13.4",
     "fastify": "^5.7.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
