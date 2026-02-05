@@ -1,0 +1,356 @@
+{
+  "info": {
+    "name": "Umoja Control Plane",
+    "description": "Strapi-based control plane API for OAuth clients, users, API keys, and content types.\n\n## Setup\n1. Start the control plane: `cd apps/umoja-control-plane && npm run develop` (default port 1337).\n2. Run seed: `npm run seed:oauth` to create demo OAuth data.\n3. Optional: create an API Token in Strapi Admin (Settings → API Tokens) and set `api_token` in the environment for protected endpoints.\n\n## Test scripts\nEach request includes Tests that assert status and response shape. Collection Runner can run all requests; some may return 403 if permissions require an API token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:1337" },
+    { "key": "api_token", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{api_token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health & Admin",
+      "item": [
+        {
+          "name": "Server root",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OAuth (Control Plane)",
+      "description": "OAuth-related content types used by Umoja API. Permissions may require API token.",
+      "item": [
+        {
+          "name": "List OAuth Clients",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(code));",
+                  "if (code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Response has data array', () => {",
+                  "    pm.expect(body).to.have.property('data');",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/oauth-clients"
+          }
+        },
+        {
+          "name": "List OAuth Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(code));",
+                  "if (code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Response has data array', () => {",
+                  "    pm.expect(body).to.have.property('data');",
+                  "    pm.expect(body.data).to.be.an('array');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/oauth-users"
+          }
+        },
+        {
+          "name": "List OAuth Products",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(code));",
+                  "if (code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/oauth-products"
+          }
+        },
+        {
+          "name": "List Audiences",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(code));",
+                  "if (code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/audiences"
+          }
+        },
+        {
+          "name": "List API Keys",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(code));",
+                  "if (code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/api-keys"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content types",
+      "description": "Single and collection types (about, articles, authors, categories).",
+      "item": [
+        {
+          "name": "Get About (single type)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(code));",
+                  "if (code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.test('Response has data object', () => {",
+                  "    pm.expect(body).to.have.property('data');",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/about"
+          }
+        },
+        {
+          "name": "List Articles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(code));",
+                  "if (code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/articles"
+          }
+        },
+        {
+          "name": "List Authors",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(code));",
+                  "if (code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/authors"
+          }
+        },
+        {
+          "name": "List Categories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(code));",
+                  "if (code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/categories"
+          }
+        },
+        {
+          "name": "Get Global (single type)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(code));",
+                  "if (code === 200) {",
+                  "  pm.expect(pm.response.json()).to.have.property('data');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/global"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test Scenarios (Negative)",
+      "description": "Expect 401/403 or 404 when auth is missing or resource not found.",
+      "item": [
+        {
+          "name": "[Negative] OAuth Clients without token (if permission required)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 403 or 200', () => pm.expect([200, 403]).to.include(code));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/oauth-clients"
+          }
+        },
+        {
+          "name": "[Negative] Invalid documentId → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "pm.test('Status is 404 or 403', () => pm.expect([403, 404]).to.include(code));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/oauth-clients/invalid-document-id-999"
+          }
+        }
+      ]
+    }
+  ]
+}

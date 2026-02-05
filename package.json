@@ -9,6 +9,9 @@
     "apps/*",
     "libs/*"
   ],
+  "engines": {
+    "vscode": "24.13.0"
+  },
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
