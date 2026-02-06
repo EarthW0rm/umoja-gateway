@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { firstOrNull, toDataArray } from '../infra/operators';
 import { StrapiHttpClient } from '../infra/strapi-http.client';
-import { StrapiResponseHelperService } from '../infra/strapi-response-helper.service';
 import type {
-  StrapiCollectionResponse,
   StrapiEntity,
   StrapiQueryParams,
-  StrapiSingleResponse,
 } from '../infra/strapi.types';
 import type { StrapiOAuthUserAttributes } from '../entities/oauth-user.attributes';
 
@@ -17,101 +17,97 @@ import type { StrapiOAuthUserAttributes } from '../entities/oauth-user.attribute
 export class OAuthUsersStrapiClient {
   private readonly COLLECTION = 'oauth-users';
 
-  constructor(
-    private readonly client: StrapiHttpClient,
-    private readonly responseHelper: StrapiResponseHelperService,
-  ) {}
-
-  private validateResponse<T extends { error?: unknown }>(response: T): T {
-    return this.responseHelper.ensureNoError(response);
-  }
+  constructor(private readonly client: StrapiHttpClient) {}
 
   /**
    * Fetches the first oauth-user from the first page (e.g. to get first document id).
    */
-  async getFirstFromList(
+  getFirstFromList(
     pageSize = 1,
-  ): Promise<StrapiEntity<StrapiOAuthUserAttributes> | null> {
-    const response = await this.getListFirst(pageSize);
-    return this.responseHelper.pickFirstEntity(response);
+  ): Observable<StrapiEntity<StrapiOAuthUserAttributes> | null> {
+    return this.getListFirst(pageSize).pipe(firstOrNull());
   }
 
   /**
    * Fetches the first oauth-user matching username and password, or null.
    */
-  async getFirstByCredentials(
+  getFirstByCredentials(
     username: string,
     password: string,
-  ): Promise<StrapiEntity<StrapiOAuthUserAttributes> | null> {
-    const response = await this.getListByCredentials(username, password);
-    return this.responseHelper.pickFirstEntity(response);
+  ): Observable<StrapiEntity<StrapiOAuthUserAttributes> | null> {
+    return this.getListByCredentials(username, password).pipe(firstOrNull());
   }
 
-  async getById(
+  getById(
     id: string,
     query?: StrapiQueryParams,
-  ): Promise<StrapiSingleResponse<StrapiOAuthUserAttributes>> {
+  ): Observable<StrapiEntity<StrapiOAuthUserAttributes> | null> {
     const path = `${this.COLLECTION}/${encodeURIComponent(id)}`;
-    const response = await this.client.get<
-      StrapiSingleResponse<StrapiOAuthUserAttributes>
-    >(path, query);
-    return this.validateResponse(response);
+    return this.client
+      .get<{ data: StrapiEntity<StrapiOAuthUserAttributes> | null }>(path, query)
+      .pipe(map((r) => r.data ?? null));
   }
 
-  async getListFirst(
+  getListFirst(
     pageSize = 1,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthUserAttributes>> {
-    const response = await this.getList({ 'pagination[pageSize]': pageSize });
-    return this.validateResponse(response);
+  ): Observable<StrapiEntity<StrapiOAuthUserAttributes>[]> {
+    return this.getList({ 'pagination[pageSize]': pageSize });
   }
 
-  async getByIdWithAudiences(
+  getByIdWithAudiences(
     userId: string,
-  ): Promise<StrapiSingleResponse<StrapiOAuthUserAttributes>> {
+  ): Observable<StrapiEntity<StrapiOAuthUserAttributes> | null> {
     return this.getById(userId, { populate: 'audiences' });
   }
 
-  async getListByCredentials(
+  getListByCredentials(
     username: string,
     password: string,
     extraQuery?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthUserAttributes>> {
-    const response = await this.getList({
+  ): Observable<StrapiEntity<StrapiOAuthUserAttributes>[]> {
+    return this.getList({
       'filters[username][$eq]': username,
       'filters[password][$eq]': password,
       populate: 'audiences',
       ...extraQuery,
     });
-    return this.validateResponse(response);
   }
 
-  async getList(
+  getList(
     query?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthUserAttributes>> {
-    const response = await this.client.get<
-      StrapiCollectionResponse<StrapiOAuthUserAttributes>
-    >(this.COLLECTION, query);
-    return this.validateResponse(response);
+  ): Observable<StrapiEntity<StrapiOAuthUserAttributes>[]> {
+    return this.client
+      .get<{ data: StrapiEntity<StrapiOAuthUserAttributes>[] }>(
+        this.COLLECTION,
+        query,
+      )
+      .pipe(toDataArray());
   }
 
-  async create(
+  create(
     data: { data: Record<string, unknown> },
-  ): Promise<StrapiSingleResponse<StrapiOAuthUserAttributes>> {
-    const response = await this.client.post<
-      StrapiSingleResponse<StrapiOAuthUserAttributes>
-    >(this.COLLECTION, data, undefined);
-    return this.validateResponse(response);
+  ): Observable<StrapiEntity<StrapiOAuthUserAttributes> | null> {
+    return this.client
+      .post<{ data: StrapiEntity<StrapiOAuthUserAttributes> | null }>(
+        this.COLLECTION,
+        data,
+        undefined,
+      )
+      .pipe(map((r) => r.data ?? null));
   }
 
-  async put(
+  put(
     id: string,
     data: { data: Record<string, unknown> },
     query?: StrapiQueryParams,
-  ): Promise<StrapiSingleResponse<StrapiOAuthUserAttributes>> {
+  ): Observable<StrapiEntity<StrapiOAuthUserAttributes> | null> {
     const path = `${this.COLLECTION}/${encodeURIComponent(id)}`;
-    const response = await this.client.put<
-      StrapiSingleResponse<StrapiOAuthUserAttributes>
-    >(path, data, query);
-    return this.validateResponse(response);
+    return this.client
+      .put<{ data: StrapiEntity<StrapiOAuthUserAttributes> | null }>(
+        path,
+        data,
+        query,
+      )
+      .pipe(map((r) => r.data ?? null));
   }
 }

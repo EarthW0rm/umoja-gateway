@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { firstOrNull, toDataArray } from '../infra/operators';
 import { StrapiHttpClient } from '../infra/strapi-http.client';
-import { StrapiResponseHelperService } from '../infra/strapi-response-helper.service';
 import type {
-  StrapiCollectionResponse,
   StrapiEntity,
   StrapiQueryParams,
-  StrapiSingleResponse,
 } from '../infra/strapi.types';
 import type { StrapiOAuthClientAttributes } from '../entities/oauth-client.attributes';
 
@@ -24,14 +24,7 @@ const POPULATE_PRODUCT_USER_AUDIENCES: StrapiQueryParams = {
 export class OAuthClientsStrapiClient {
   private readonly COLLECTION = 'oauth-clients';
 
-  constructor(
-    private readonly client: StrapiHttpClient,
-    private readonly responseHelper: StrapiResponseHelperService,
-  ) {}
-
-  private validateResponse<T extends { error?: unknown }>(response: T): T {
-    return this.responseHelper.ensureNoError(response);
-  }
+  constructor(private readonly client: StrapiHttpClient) {}
 
   /**
    * Returns the default query params to populate product, user, and audiences.
@@ -41,147 +34,102 @@ export class OAuthClientsStrapiClient {
     return { ...POPULATE_PRODUCT_USER_AUDIENCES };
   }
 
-  /**
-   * Fetches oauth-clients filtered by clientSecret, with product, user, and audiences populated.
-   * @param clientSecret - Client secret to filter by.
-   * @param extraQuery - Optional extra query params (e.g. pagination).
-   * @returns Collection response.
-   */
-  async getListByClientSecret(
+  getListByClientSecret(
     clientSecret: string,
     extraQuery?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthClientAttributes>> {
-    const response = await this.getList({
+  ): Observable<StrapiEntity<StrapiOAuthClientAttributes>[]> {
+    return this.getList({
       'filters[clientSecret][$eq]': clientSecret,
       ...POPULATE_PRODUCT_USER_AUDIENCES,
       ...extraQuery,
     });
-    return this.validateResponse(response);
   }
 
   /**
    * Fetches the first oauth-client matching clientSecret, or null.
    */
-  async getFirstByClientSecret(
+  getFirstByClientSecret(
     clientSecret: string,
-  ): Promise<StrapiEntity<StrapiOAuthClientAttributes> | null> {
-    const response = await this.getListByClientSecret(clientSecret);
-    return this.responseHelper.pickFirstEntity(response);
+  ): Observable<StrapiEntity<StrapiOAuthClientAttributes> | null> {
+    return this.getListByClientSecret(clientSecret).pipe(firstOrNull());
   }
 
-  /**
-   * Fetches oauth-clients filtered by numeric id, with product, user, and audiences populated.
-   * @param numericId - Numeric (integer) id to filter by.
-   * @param extraQuery - Optional extra query params.
-   * @returns Collection response.
-   */
-  async getListByNumericId(
+  getListByNumericId(
     numericId: number,
     extraQuery?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthClientAttributes>> {
-    const response = await this.getList({
+  ): Observable<StrapiEntity<StrapiOAuthClientAttributes>[]> {
+    return this.getList({
       'filters[id][$eq]': numericId,
       ...POPULATE_PRODUCT_USER_AUDIENCES,
       ...extraQuery,
     });
-    return this.validateResponse(response);
   }
 
   /**
    * Fetches the first oauth-client matching numeric id, or null.
    */
-  async getFirstByNumericId(
+  getFirstByNumericId(
     numericId: number,
-  ): Promise<StrapiEntity<StrapiOAuthClientAttributes> | null> {
-    const response = await this.getListByNumericId(numericId);
-    return this.responseHelper.pickFirstEntity(response);
+  ): Observable<StrapiEntity<StrapiOAuthClientAttributes> | null> {
+    return this.getListByNumericId(numericId).pipe(firstOrNull());
   }
 
-  /**
-   * Fetches oauth-clients filtered by product documentId, with all relations populated.
-   * @param productId - Product document id to filter by.
-   * @param extraQuery - Optional extra query params.
-   * @returns Collection response.
-   */
-  async getListByProductId(
+  getListByProductId(
     productId: string,
     extraQuery?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthClientAttributes>> {
-    const response = await this.getList({
+  ): Observable<StrapiEntity<StrapiOAuthClientAttributes>[]> {
+    return this.getList({
       'filters[product][documentId][$eq]': productId,
       populate: '*',
       ...extraQuery,
     });
-    return this.validateResponse(response);
   }
 
-  /**
-   * Fetches a single oauth-client by document id or numeric id.
-   * @param id - Document id or numeric id.
-   * @param query - Optional populate/filters (e.g. populate[0]=product).
-   * @returns Single response or null in data.
-   */
-  async getById(
+  getById(
     id: string,
     query?: StrapiQueryParams,
-  ): Promise<StrapiSingleResponse<StrapiOAuthClientAttributes>> {
+  ): Observable<StrapiEntity<StrapiOAuthClientAttributes> | null> {
     const path = `${this.COLLECTION}/${encodeURIComponent(id)}`;
-    const response = await this.client.get<StrapiSingleResponse<StrapiOAuthClientAttributes>>(
-      path,
-      query,
-    );
-    return this.validateResponse(response);
+    return this.client
+      .get<{ data: StrapiEntity<StrapiOAuthClientAttributes> | null }>(path, query)
+      .pipe(map((r) => r.data ?? null));
   }
 
-  /**
-   * Fetches oauth-clients with optional filters and populate.
-   * @param query - Filters, populate, pagination (e.g. filters[clientSecret][$eq], populate).
-   * @returns Collection response.
-   */
-  async getList(
+  getList(
     query?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthClientAttributes>> {
-    const response = await this.client.get<StrapiCollectionResponse<StrapiOAuthClientAttributes>>(
-      this.COLLECTION,
-      query,
-    );
-    return this.validateResponse(response);
+  ): Observable<StrapiEntity<StrapiOAuthClientAttributes>[]> {
+    return this.client
+      .get<{ data: StrapiEntity<StrapiOAuthClientAttributes>[] }>(
+        this.COLLECTION,
+        query,
+      )
+      .pipe(toDataArray());
   }
 
-  /**
-   * Creates a new oauth-client.
-   * @param data - Payload under { data: { ...attributes } }.
-   * @returns Created document in single response.
-   */
-  async create(
+  create(
     data: { data: Record<string, unknown> },
-  ): Promise<StrapiSingleResponse<StrapiOAuthClientAttributes>> {
-    const response = await this.client.post<StrapiSingleResponse<StrapiOAuthClientAttributes>>(
-      this.COLLECTION,
-      data,
-      undefined,
-    );
-    return this.validateResponse(response);
+  ): Observable<StrapiEntity<StrapiOAuthClientAttributes> | null> {
+    return this.client
+      .post<{ data: StrapiEntity<StrapiOAuthClientAttributes> | null }>(
+        this.COLLECTION,
+        data,
+        undefined,
+      )
+      .pipe(map((r) => r.data ?? null));
   }
 
-  /**
-   * Updates an existing oauth-client by id.
-   * @param id - Document id or numeric id.
-   * @param data - Payload under { data: { ...attributes } }.
-   * @param query - Optional query params.
-   * @returns Updated document in single response.
-   */
-  async put(
+  put(
     id: string,
     data: { data: Record<string, unknown> },
     query?: StrapiQueryParams,
-  ): Promise<StrapiSingleResponse<StrapiOAuthClientAttributes>> {
+  ): Observable<StrapiEntity<StrapiOAuthClientAttributes> | null> {
     const path = `${this.COLLECTION}/${encodeURIComponent(id)}`;
-    const response = await this.client.put<StrapiSingleResponse<StrapiOAuthClientAttributes>>(
-      path,
-      data,
-      query,
-    );
-    return this.validateResponse(response);
+    return this.client
+      .put<{ data: StrapiEntity<StrapiOAuthClientAttributes> | null }>(
+        path,
+        data,
+        query,
+      )
+      .pipe(map((r) => r.data ?? null));
   }
 }

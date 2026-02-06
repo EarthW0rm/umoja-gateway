@@ -45,3 +45,23 @@ export interface StrapiCollectionResponse<T> {
   meta?: unknown;
   error?: StrapiError;
 }
+
+/**
+ * Relation shape for a single related document (populate).
+ * Strapi v4/v5 may return { data: entity }, the entity itself, or null.
+ */
+export type StrapiRelationSingle<T> =
+  | { data: StrapiEntity<T> | null }
+  | StrapiEntity<T>
+  | null
+  | undefined;
+
+/**
+ * Relation shape for multiple related documents (populate).
+ * Strapi v4/v5 may return { data: entity[] }, the array itself, or null.
+ */
+export type StrapiRelationMany<T> =
+  | { data: StrapiEntity<T>[] }
+  | StrapiEntity<T>[]
+  | null
+  | undefined;

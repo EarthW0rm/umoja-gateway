@@ -1,7 +1,6 @@
-import { BadGatewayException } from '@nestjs/common';
+import { firstValueFrom, of } from 'rxjs';
 import { OAuthClientsStrapiClient } from './oauth-clients.strapi-client';
 import { StrapiHttpClient } from '../infra/strapi-http.client';
-import { StrapiResponseHelperService } from '../infra/strapi-response-helper.service';
 import type {
   StrapiCollectionResponse,
   StrapiEntity,
@@ -12,7 +11,6 @@ import type { StrapiOAuthClientAttributes } from '../entities/oauth-client.attri
 describe('OAuthClientsStrapiClient', () => {
   let client: OAuthClientsStrapiClient;
   let strapiClient: StrapiHttpClient;
-  let responseHelper: StrapiResponseHelperService;
 
   const collectionResponse: StrapiCollectionResponse<StrapiOAuthClientAttributes> = {
     data: [
@@ -36,15 +34,11 @@ describe('OAuthClientsStrapiClient', () => {
 
   beforeEach(() => {
     strapiClient = {
-      get: jest.fn().mockResolvedValue(collectionResponse),
-      post: jest.fn().mockResolvedValue(singleResponse),
-      put: jest.fn().mockResolvedValue(singleResponse),
+      get: jest.fn().mockReturnValue(of(collectionResponse)),
+      post: jest.fn().mockReturnValue(of(singleResponse)),
+      put: jest.fn().mockReturnValue(of(singleResponse)),
     } as unknown as StrapiHttpClient;
-    responseHelper = {
-      ensureNoError: jest.fn(<T extends { error?: unknown }>(r: T): T => r),
-      pickFirstEntity: jest.fn().mockReturnValue(firstEntity),
-    } as unknown as StrapiResponseHelperService;
-    client = new OAuthClientsStrapiClient(strapiClient, responseHelper);
+    client = new OAuthClientsStrapiClient(strapiClient);
   });
 
   describe('getPopulateProductUserAudiences', () => {
@@ -63,30 +57,21 @@ describe('OAuthClientsStrapiClient', () => {
   describe('getList', () => {
     it('calls client.get with collection and query', async () => {
       const query = { populate: '*' };
-      const result = await client.getList(query);
+      const result = await firstValueFrom(client.getList(query));
 
       expect((strapiClient as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith(
         'oauth-clients',
         query,
       );
-      expect((responseHelper as unknown as { ensureNoError: jest.Mock }).ensureNoError).toHaveBeenCalledWith(
-        collectionResponse,
-      );
-      expect(result).toEqual(collectionResponse);
-    });
-
-    it('throws when ensureNoError throws', async () => {
-      (responseHelper.ensureNoError as unknown as jest.Mock).mockImplementation(() => {
-        throw new BadGatewayException('Control plane unavailable');
-      });
-
-      await expect(client.getList()).rejects.toThrow(BadGatewayException);
+      expect(result).toEqual(collectionResponse.data);
     });
   });
 
   describe('getListByClientSecret', () => {
     it('calls getList with clientSecret filter and populate', async () => {
-      const result = await client.getListByClientSecret('my-secret');
+      const result = await firstValueFrom(
+        client.getListByClientSecret('my-secret'),
+      );
 
       expect((strapiClient as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith('oauth-clients', {
         'filters[clientSecret][$eq]': 'my-secret',
@@ -94,11 +79,13 @@ describe('OAuthClientsStrapiClient', () => {
         'populate[1]': 'user',
         'populate[2]': 'audiences',
       });
-      expect(result).toEqual(collectionResponse);
+      expect(result).toEqual(collectionResponse.data);
     });
 
     it('merges extraQuery', async () => {
-      await client.getListByClientSecret('s', { 'pagination[pageSize]': 1 });
+      await firstValueFrom(
+        client.getListByClientSecret('s', { 'pagination[pageSize]': 1 }),
+      );
 
       expect((strapiClient as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith('oauth-clients', {
         'filters[clientSecret][$eq]': 's',
@@ -112,18 +99,21 @@ describe('OAuthClientsStrapiClient', () => {
 
   describe('getFirstByClientSecret', () => {
     it('returns first entity from getListByClientSecret', async () => {
-      const result = await client.getFirstByClientSecret('secret');
-
-      expect((responseHelper as unknown as { pickFirstEntity: jest.Mock }).pickFirstEntity).toHaveBeenCalledWith(
-        collectionResponse,
+      const result = await firstValueFrom(
+        client.getFirstByClientSecret('secret'),
       );
+
       expect(result).toEqual(firstEntity);
     });
 
-    it('returns null when pickFirstEntity returns null', async () => {
-      (responseHelper as unknown as { pickFirstEntity: jest.Mock }).pickFirstEntity.mockReturnValue(null);
+    it('returns null when collection is empty', async () => {
+      (strapiClient as unknown as { get: jest.Mock }).get.mockReturnValueOnce(
+        of({ data: [] }),
+      );
 
-      const result = await client.getFirstByClientSecret('secret');
+      const result = await firstValueFrom(
+        client.getFirstByClientSecret('secret'),
+      );
 
       expect(result).toBeNull();
     });
@@ -131,7 +121,7 @@ describe('OAuthClientsStrapiClient', () => {
 
   describe('getListByNumericId', () => {
     it('calls getList with id filter and populate', async () => {
-      const result = await client.getListByNumericId(42);
+      const result = await firstValueFrom(client.getListByNumericId(42));
 
       expect((strapiClient as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith('oauth-clients', {
         'filters[id][$eq]': 42,
@@ -139,53 +129,55 @@ describe('OAuthClientsStrapiClient', () => {
         'populate[1]': 'user',
         'populate[2]': 'audiences',
       });
-      expect(result).toEqual(collectionResponse);
+      expect(result).toEqual(collectionResponse.data);
     });
   });
 
   describe('getFirstByNumericId', () => {
     it('returns first entity from getListByNumericId', async () => {
-      const result = await client.getFirstByNumericId(42);
+      const result = await firstValueFrom(client.getFirstByNumericId(42));
 
-      expect((responseHelper as unknown as { pickFirstEntity: jest.Mock }).pickFirstEntity).toHaveBeenCalledWith(
-        collectionResponse,
-      );
       expect(result).toEqual(firstEntity);
     });
   });
 
   describe('getListByProductId', () => {
     it('calls getList with product documentId filter and populate *', async () => {
-      const result = await client.getListByProductId('product-doc-id');
+      const result = await firstValueFrom(
+        client.getListByProductId('product-doc-id'),
+      );
 
       expect((strapiClient as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith('oauth-clients', {
         'filters[product][documentId][$eq]': 'product-doc-id',
         populate: '*',
       });
-      expect(result).toEqual(collectionResponse);
+      expect(result).toEqual(collectionResponse.data);
     });
   });
 
   describe('getById', () => {
     it('calls client.get with collection/id path and query', async () => {
-      (strapiClient as unknown as { get: jest.Mock }).get.mockResolvedValue(singleResponse);
+      (strapiClient as unknown as { get: jest.Mock }).get.mockReturnValue(
+        of(singleResponse),
+      );
 
-      const result = await client.getById('doc-123', { populate: 'product' });
+      const result = await firstValueFrom(
+        client.getById('doc-123', { populate: 'product' }),
+      );
 
       expect((strapiClient as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith(
         'oauth-clients/doc-123',
         { populate: 'product' },
       );
-      expect((responseHelper as unknown as { ensureNoError: jest.Mock }).ensureNoError).toHaveBeenCalledWith(
-        singleResponse,
-      );
-      expect(result).toEqual(singleResponse);
+      expect(result).toEqual(singleResponse.data);
     });
 
     it('encodes id in path', async () => {
-      (strapiClient as unknown as { get: jest.Mock }).get.mockResolvedValue(singleResponse);
+      (strapiClient as unknown as { get: jest.Mock }).get.mockReturnValue(
+        of(singleResponse),
+      );
 
-      await client.getById('id/with/slash');
+      await firstValueFrom(client.getById('id/with/slash'));
 
       expect((strapiClient as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith(
         'oauth-clients/id%2Fwith%2Fslash',
@@ -197,34 +189,30 @@ describe('OAuthClientsStrapiClient', () => {
   describe('create', () => {
     it('calls client.post with collection and data', async () => {
       const data = { data: { clientSecret: 'new-secret' } };
-      const result = await client.create(data);
+      const result = await firstValueFrom(client.create(data));
 
       expect((strapiClient as unknown as { post: jest.Mock }).post).toHaveBeenCalledWith(
         'oauth-clients',
         data,
         undefined,
       );
-      expect((responseHelper as unknown as { ensureNoError: jest.Mock }).ensureNoError).toHaveBeenCalledWith(
-        singleResponse,
-      );
-      expect(result).toEqual(singleResponse);
+      expect(result).toEqual(singleResponse.data);
     });
   });
 
   describe('put', () => {
     it('calls client.put with collection/id path, data and query', async () => {
       const data = { data: { clientSecret: 'updated' } };
-      const result = await client.put('doc-456', data, { populate: '*' });
+      const result = await firstValueFrom(
+        client.put('doc-456', data, { populate: '*' }),
+      );
 
       expect((strapiClient as unknown as { put: jest.Mock }).put).toHaveBeenCalledWith(
         'oauth-clients/doc-456',
         data,
         { populate: '*' },
       );
-      expect((responseHelper as unknown as { ensureNoError: jest.Mock }).ensureNoError).toHaveBeenCalledWith(
-        singleResponse,
-      );
-      expect(result).toEqual(singleResponse);
+      expect(result).toEqual(singleResponse.data);
     });
   });
 });

@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { firstOrNull, toDataArray } from '../infra/operators';
 import { StrapiHttpClient } from '../infra/strapi-http.client';
-import { StrapiResponseHelperService } from '../infra/strapi-response-helper.service';
-import type {
-  StrapiCollectionResponse,
-  StrapiEntity,
-  StrapiQueryParams,
-} from '../infra/strapi.types';
+import type { StrapiEntity, StrapiQueryParams } from '../infra/strapi.types';
 import type { StrapiOAuthAudienceAttributes } from '../entities/oauth-audience.attributes';
 
 /**
@@ -16,43 +13,36 @@ import type { StrapiOAuthAudienceAttributes } from '../entities/oauth-audience.a
 export class OAuthAudiencesStrapiClient {
   private readonly COLLECTION = 'oauth-audiences';
 
-  constructor(
-    private readonly client: StrapiHttpClient,
-    private readonly responseHelper: StrapiResponseHelperService,
-  ) {}
-
-  private validateResponse<T extends { error?: unknown }>(response: T): T {
-    return this.responseHelper.ensureNoError(response);
-  }
+  constructor(private readonly client: StrapiHttpClient) {}
 
   /**
    * Fetches the first oauth-audience matching value, or null.
    */
-  async getFirstByValue(
+  getFirstByValue(
     value: string,
-  ): Promise<StrapiEntity<StrapiOAuthAudienceAttributes> | null> {
-    const response = await this.getListByValue(value);
-    return this.responseHelper.pickFirstEntity(response);
+  ): Observable<StrapiEntity<StrapiOAuthAudienceAttributes> | null> {
+    return this.getListByValue(value).pipe(firstOrNull());
   }
 
-  async getListByValue(
+  getListByValue(
     value: string,
     extraQuery?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthAudienceAttributes>> {
-    const response = await this.getList({
+  ): Observable<StrapiEntity<StrapiOAuthAudienceAttributes>[]> {
+    return this.getList({
       'filters[value][$eq]': value,
       'pagination[pageSize]': 1,
       ...extraQuery,
     });
-    return this.validateResponse(response);
   }
 
-  async getList(
+  getList(
     query?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthAudienceAttributes>> {
-    const response = await this.client.get<
-      StrapiCollectionResponse<StrapiOAuthAudienceAttributes>
-    >(this.COLLECTION, query);
-    return this.validateResponse(response);
+  ): Observable<StrapiEntity<StrapiOAuthAudienceAttributes>[]> {
+    return this.client
+      .get<{ data: StrapiEntity<StrapiOAuthAudienceAttributes>[] }>(
+        this.COLLECTION,
+        query,
+      )
+      .pipe(toDataArray());
   }
 }

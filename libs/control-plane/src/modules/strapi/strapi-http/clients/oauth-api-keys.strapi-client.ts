@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { StrapiHttpClient } from '../infra/strapi-http.client';
-import { StrapiResponseHelperService } from '../infra/strapi-response-helper.service';
+import { toDataArray } from '../infra/operators';
 import type {
-  StrapiCollectionResponse,
+  StrapiEntity,
   StrapiQueryParams,
 } from '../infra/strapi.types';
 import type { StrapiOAuthApiKeyAttributes } from '../entities/oauth-api-key.attributes';
@@ -10,33 +11,28 @@ import type { StrapiOAuthApiKeyAttributes } from '../entities/oauth-api-key.attr
 /**
  * Strapi client for the oauth-api-keys collection.
  * Exposes GET list (e.g. for API key validation cache).
+ * Non-2xx responses are already turned into exceptions by StrapiHttpClient.
  */
 @Injectable()
 export class OAuthApiKeysStrapiClient {
   private readonly COLLECTION = 'oauth-api-keys';
 
-  constructor(
-    private readonly client: StrapiHttpClient,
-    private readonly responseHelper: StrapiResponseHelperService,
-  ) {}
+  constructor(private readonly client: StrapiHttpClient) {}
 
-  private validateResponse<T extends { error?: unknown }>(response: T): T {
-    return this.responseHelper.ensureNoError(response);
-  }
-
-  async getListWithClientPopulate(
+  getListWithClientPopulate(
     extraQuery?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthApiKeyAttributes>> {
-    const response = await this.getList({ populate: 'client', ...extraQuery });
-    return this.validateResponse(response);
+  ): Observable<StrapiEntity<StrapiOAuthApiKeyAttributes>[]> {
+    return this.getList({ populate: 'client', ...extraQuery });
   }
 
-  async getList(
+  getList(
     query?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthApiKeyAttributes>> {
-    const response = await this.client.get<
-      StrapiCollectionResponse<StrapiOAuthApiKeyAttributes>
-    >(this.COLLECTION, query);
-    return this.validateResponse(response);
+  ): Observable<StrapiEntity<StrapiOAuthApiKeyAttributes>[]> {
+    return this.client
+      .get<{ data: StrapiEntity<StrapiOAuthApiKeyAttributes>[] }>(
+        this.COLLECTION,
+        query,
+      )
+      .pipe(toDataArray());
   }
 }

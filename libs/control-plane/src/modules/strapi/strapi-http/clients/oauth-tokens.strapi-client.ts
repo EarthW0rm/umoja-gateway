@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { firstOrNull, toDataArray } from '../infra/operators';
 import { StrapiHttpClient } from '../infra/strapi-http.client';
-import { StrapiResponseHelperService } from '../infra/strapi-response-helper.service';
 import type {
-  StrapiCollectionResponse,
   StrapiEntity,
   StrapiQueryParams,
-  StrapiSingleResponse,
 } from '../infra/strapi.types';
 import type { StrapiOAuthTokenAttributes } from '../entities/oauth-token.attributes';
 
@@ -17,55 +17,48 @@ import type { StrapiOAuthTokenAttributes } from '../entities/oauth-token.attribu
 export class OAuthTokensStrapiClient {
   private readonly COLLECTION = 'oauth-tokens';
 
-  constructor(
-    private readonly client: StrapiHttpClient,
-    private readonly responseHelper: StrapiResponseHelperService,
-  ) {}
-
-  private validateResponse<T extends { error?: unknown }>(response: T): T {
-    return this.responseHelper.ensureNoError(response);
-  }
+  constructor(private readonly client: StrapiHttpClient) {}
 
   /**
    * Fetches the first oauth-token matching accessToken, or null.
    */
-  async getFirstByAccessToken(
+  getFirstByAccessToken(
     accessToken: string,
-  ): Promise<StrapiEntity<StrapiOAuthTokenAttributes> | null> {
-    const response = await this.getListByAccessToken(accessToken);
-    return this.responseHelper.pickFirstEntity(response);
+  ): Observable<StrapiEntity<StrapiOAuthTokenAttributes> | null> {
+    return this.getListByAccessToken(accessToken).pipe(firstOrNull());
   }
 
-  async getListByAccessToken(
+  getListByAccessToken(
     accessToken: string,
     extraQuery?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthTokenAttributes>> {
-    const response = await this.getList({
+  ): Observable<StrapiEntity<StrapiOAuthTokenAttributes>[]> {
+    return this.getList({
       'filters[accessToken][$eq]': accessToken,
       populate: '*',
       ...extraQuery,
     });
-    return this.validateResponse(response);
   }
 
-  async getList(
+  getList(
     query?: StrapiQueryParams,
-  ): Promise<StrapiCollectionResponse<StrapiOAuthTokenAttributes>> {
-    const response = await this.client.get<StrapiCollectionResponse<StrapiOAuthTokenAttributes>>(
-      this.COLLECTION,
-      query,
-    );
-    return this.validateResponse(response);
+  ): Observable<StrapiEntity<StrapiOAuthTokenAttributes>[]> {
+    return this.client
+      .get<{ data: StrapiEntity<StrapiOAuthTokenAttributes>[] }>(
+        this.COLLECTION,
+        query,
+      )
+      .pipe(toDataArray());
   }
 
-  async create(
+  create(
     data: { data: Record<string, unknown> },
-  ): Promise<StrapiSingleResponse<StrapiOAuthTokenAttributes>> {
-    const response = await this.client.post<StrapiSingleResponse<StrapiOAuthTokenAttributes>>(
-      this.COLLECTION,
-      data,
-      undefined,
-    );
-    return this.validateResponse(response);
+  ): Observable<StrapiEntity<StrapiOAuthTokenAttributes> | null> {
+    return this.client
+      .post<{ data: StrapiEntity<StrapiOAuthTokenAttributes> | null }>(
+        this.COLLECTION,
+        data,
+        undefined,
+      )
+      .pipe(map((r) => r.data ?? null));
   }
 }

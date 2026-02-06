@@ -1,7 +1,7 @@
-import { BadGatewayException } from '@nestjs/common';
+import { firstValueFrom, of } from 'rxjs';
 import { OAuthAuthorizationCodesStrapiClient } from './oauth-authorization-codes.strapi-client';
 import { StrapiHttpClient } from '../infra/strapi-http.client';
-import { StrapiResponseHelperService } from '../infra/strapi-response-helper.service';
+import { StrapiEntityViewService } from '../infra/strapi-entity-view.service';
 import type {
   StrapiCollectionResponse,
   StrapiEntity,
@@ -12,7 +12,7 @@ import type { StrapiOAuthAuthorizationCodeAttributes } from '../entities/oauth-a
 describe('OAuthAuthorizationCodesStrapiClient', () => {
   let client: OAuthAuthorizationCodesStrapiClient;
   let strapiClient: StrapiHttpClient;
-  let responseHelper: StrapiResponseHelperService;
+  let strapiEntityView: StrapiEntityViewService;
 
   const collectionResponse: StrapiCollectionResponse<StrapiOAuthAuthorizationCodeAttributes> = {
     data: [
@@ -34,54 +34,44 @@ describe('OAuthAuthorizationCodesStrapiClient', () => {
 
   beforeEach(() => {
     strapiClient = {
-      get: jest.fn().mockResolvedValue(collectionResponse),
-      post: jest.fn().mockResolvedValue(singleResponse),
-      delete: jest.fn().mockResolvedValue({}),
+      get: jest.fn().mockReturnValue(of(collectionResponse)),
+      post: jest.fn().mockReturnValue(of(singleResponse)),
+      delete: jest.fn().mockReturnValue(of({})),
     } as unknown as StrapiHttpClient;
-    responseHelper = {
-      ensureNoError: jest.fn(<T extends { error?: unknown }>(r: T): T => r),
-      pickFirstEntity: jest.fn().mockReturnValue(firstEntity),
-    } as unknown as StrapiResponseHelperService;
-    client = new OAuthAuthorizationCodesStrapiClient(strapiClient, responseHelper);
+    strapiEntityView = new StrapiEntityViewService();
+    client = new OAuthAuthorizationCodesStrapiClient(strapiClient, strapiEntityView);
   });
 
   describe('getList', () => {
     it('calls client.get with collection name and query', async () => {
       const query = { populate: '*' };
-      const result = await client.getList(query);
+      const result = await firstValueFrom(client.getList(query));
 
       expect((strapiClient as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith(
         'oauth-authorization-codes',
         query,
       );
-      expect((responseHelper as unknown as { ensureNoError: jest.Mock }).ensureNoError).toHaveBeenCalledWith(
-        collectionResponse,
-      );
-      expect(result).toEqual(collectionResponse);
-    });
-
-    it('throws when ensureNoError throws', async () => {
-      (responseHelper.ensureNoError as unknown as jest.Mock).mockImplementation(() => {
-        throw new BadGatewayException('Control plane unavailable');
-      });
-
-      await expect(client.getList()).rejects.toThrow(BadGatewayException);
+      expect(result).toEqual(collectionResponse.data);
     });
   });
 
   describe('getListByAuthorizationCode', () => {
     it('calls getList with code filter', async () => {
-      const result = await client.getListByAuthorizationCode('code-1');
+      const result = await firstValueFrom(
+        client.getListByAuthorizationCode('code-1'),
+      );
 
       expect((strapiClient as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith(
         'oauth-authorization-codes',
         { 'filters[authorizationCode][$eq]': 'code-1' },
       );
-      expect(result).toEqual(collectionResponse);
+      expect(result).toEqual(collectionResponse.data);
     });
 
     it('adds populate * when options.populate is true', async () => {
-      await client.getListByAuthorizationCode('code-1', { populate: true });
+      await firstValueFrom(
+        client.getListByAuthorizationCode('code-1', { populate: true }),
+      );
 
       expect((strapiClient as unknown as { get: jest.Mock }).get).toHaveBeenCalledWith(
         'oauth-authorization-codes',
@@ -92,18 +82,21 @@ describe('OAuthAuthorizationCodesStrapiClient', () => {
 
   describe('getFirstByAuthorizationCode', () => {
     it('returns first entity from getListByAuthorizationCode', async () => {
-      const result = await client.getFirstByAuthorizationCode('code-1');
-
-      expect((responseHelper as unknown as { pickFirstEntity: jest.Mock }).pickFirstEntity).toHaveBeenCalledWith(
-        collectionResponse,
+      const result = await firstValueFrom(
+        client.getFirstByAuthorizationCode('code-1'),
       );
+
       expect(result).toEqual(firstEntity);
     });
 
-    it('returns null when pickFirstEntity returns null', async () => {
-      (responseHelper as unknown as { pickFirstEntity: jest.Mock }).pickFirstEntity.mockReturnValue(null);
+    it('returns null when collection is empty', async () => {
+      (strapiClient as unknown as { get: jest.Mock }).get.mockReturnValueOnce(
+        of({ data: [] }),
+      );
 
-      const result = await client.getFirstByAuthorizationCode('code-1');
+      const result = await firstValueFrom(
+        client.getFirstByAuthorizationCode('code-1'),
+      );
 
       expect(result).toBeNull();
     });
@@ -112,23 +105,20 @@ describe('OAuthAuthorizationCodesStrapiClient', () => {
   describe('create', () => {
     it('calls client.post with collection, data, and undefined query', async () => {
       const data = { data: { authorizationCode: 'new-code' } };
-      const result = await client.create(data);
+      const result = await firstValueFrom(client.create(data));
 
       expect((strapiClient as unknown as { post: jest.Mock }).post).toHaveBeenCalledWith(
         'oauth-authorization-codes',
         data,
         undefined,
       );
-      expect((responseHelper as unknown as { ensureNoError: jest.Mock }).ensureNoError).toHaveBeenCalledWith(
-        singleResponse,
-      );
-      expect(result).toEqual(singleResponse);
+      expect(result).toEqual(singleResponse.data);
     });
   });
 
   describe('deleteById', () => {
     it('calls client.delete with encoded path', async () => {
-      await client.deleteById('doc-id-123');
+      await firstValueFrom(client.deleteById('doc-id-123'));
 
       expect((strapiClient as unknown as { delete: jest.Mock }).delete).toHaveBeenCalledWith(
         'oauth-authorization-codes/doc-id-123',
@@ -137,11 +127,42 @@ describe('OAuthAuthorizationCodesStrapiClient', () => {
     });
 
     it('encodes id in path', async () => {
-      await client.deleteById('id/with/slash');
+      await firstValueFrom(client.deleteById('id/with/slash'));
 
       expect((strapiClient as unknown as { delete: jest.Mock }).delete).toHaveBeenCalledWith(
         'oauth-authorization-codes/id%2Fwith%2Fslash',
         undefined,
+      );
+    });
+  });
+
+  describe('deleteByEntity', () => {
+    it('resolves doc id from entity and calls delete', async () => {
+      await firstValueFrom(client.deleteByEntity(firstEntity));
+
+      expect((strapiClient as unknown as { delete: jest.Mock }).delete).toHaveBeenCalledWith(
+        'oauth-authorization-codes/1',
+        undefined,
+      );
+    });
+
+    it('uses documentId when present (v5 style)', async () => {
+      const entityV5 = {
+        documentId: 'abc24charsdocumentid',
+        attributes: { authorizationCode: 'code', expiresAt: '', redirectUri: '' },
+      } as StrapiEntity<StrapiOAuthAuthorizationCodeAttributes>;
+      await firstValueFrom(client.deleteByEntity(entityV5));
+
+      expect((strapiClient as unknown as { delete: jest.Mock }).delete).toHaveBeenCalledWith(
+        'oauth-authorization-codes/abc24charsdocumentid',
+        undefined,
+      );
+    });
+
+    it('throws when entity has no documentId or id', () => {
+      const entityNoId = { attributes: {} } as StrapiEntity<StrapiOAuthAuthorizationCodeAttributes>;
+      expect(() => client.deleteByEntity(entityNoId)).toThrow(
+        'Cannot delete by entity: entity has no documentId or id',
       );
     });
   });

@@ -1,12 +1,7 @@
-import { Module, DynamicModule, Provider } from '@nestjs/common';
+import { Module, DynamicModule } from '@nestjs/common';
 import { AUTH_REPOSITORY } from '@oauth/oauth';
-import {
-  CONTROL_PLANE_HTTP_TIMEOUT,
-  CONTROL_PLANE_STRAPI_API_TOKEN,
-  CONTROL_PLANE_STRAPI_BASE_URL,
-  CONTROL_PLANE_STRAPI_OPTIONS,
-} from '../../control-plane.tokens';
 import { StrapiOAuthRepository } from './strapi-oauth.repository';
+import { StrapiHttpModule } from './strapi-http/strapi-http.module';
 
 /**
  * Options required to wire the Strapi-backed repository.
@@ -55,13 +50,9 @@ export class ControlPlaneStrapiModule {
    * @returns The configured dynamic module.
    */
   static register(options: ControlPlaneStrapiOptions): DynamicModule {
-    const optionProviders: Provider[] = [
-      {
-        provide: CONTROL_PLANE_STRAPI_OPTIONS,
-        useValue: options,
-      },
-    ];
-    return this.buildModule(optionProviders);
+    return this.buildModule({
+      imports: [StrapiHttpModule.forRoot(options)],
+    });
   }
 
   /**
@@ -70,45 +61,28 @@ export class ControlPlaneStrapiModule {
    * @returns The configured dynamic module.
    */
   static registerAsync(options: ControlPlaneStrapiAsyncOptions): DynamicModule {
-    const optionProviders: Provider[] = [
-      {
-        provide: CONTROL_PLANE_STRAPI_OPTIONS,
-        useFactory: options.useFactory,
-        inject: options.inject ?? [],
-      },
-    ];
-    return this.buildModule(optionProviders, options.imports);
+    return this.buildModule({
+      imports: [
+        StrapiHttpModule.forRootAsync({
+          imports: options.imports,
+          inject: options.inject,
+          useFactory: options.useFactory,
+        }),
+        ...(options.imports ?? []),
+      ],
+    });
   }
 
-  private static buildModule(optionProviders: Provider[], imports?: any[]): DynamicModule {
-    const providers: Provider[] = [
-      ...optionProviders,
-      {
-        provide: CONTROL_PLANE_STRAPI_BASE_URL,
-        useFactory: (opts: ControlPlaneStrapiOptions) => opts.baseUrl,
-        inject: [CONTROL_PLANE_STRAPI_OPTIONS],
-      },
-      {
-        provide: CONTROL_PLANE_STRAPI_API_TOKEN,
-        useFactory: (opts: ControlPlaneStrapiOptions) => opts.apiToken,
-        inject: [CONTROL_PLANE_STRAPI_OPTIONS],
-      },
-      {
-        provide: CONTROL_PLANE_HTTP_TIMEOUT,
-        useFactory: (opts: ControlPlaneStrapiOptions) => opts.timeoutMs ?? 5000,
-        inject: [CONTROL_PLANE_STRAPI_OPTIONS],
-      },
-      StrapiOAuthRepository,
-      {
-        provide: AUTH_REPOSITORY,
-        useExisting: StrapiOAuthRepository,
-      },
-    ];
-
+  private static buildModule(config: {
+    imports: any[];
+  }): DynamicModule {
     return {
       module: ControlPlaneStrapiModule,
-      imports: imports ?? [],
-      providers,
+      imports: config.imports,
+      providers: [
+        StrapiOAuthRepository,
+        { provide: AUTH_REPOSITORY, useExisting: StrapiOAuthRepository },
+      ],
       exports: [AUTH_REPOSITORY, StrapiOAuthRepository],
     };
   }
