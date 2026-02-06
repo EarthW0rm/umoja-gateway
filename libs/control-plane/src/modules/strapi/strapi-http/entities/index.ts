@@ -4,9 +4,9 @@
  */
 export { StrapiOAuthClientAttributes } from './oauth-client.attributes';
 export { StrapiOAuthTokenAttributes } from './oauth-token.attributes';
-export { StrapiRefreshTokenAttributes } from './oauth-refresh-token.attributes';
-export { StrapiAuthorizationCodeAttributes } from './oauth-authorization-code.attributes';
+export { StrapiOAuthRefreshTokenAttributes } from './oauth-refresh-token.attributes';
+export { StrapiOAuthAuthorizationCodeAttributes } from './oauth-authorization-code.attributes';
 export { StrapiOAuthProductAttributes } from './oauth-product.attributes';
 export { StrapiOAuthUserAttributes } from './oauth-user.attributes';
-export { StrapiAudienceAttributes } from './oauth-audience.attributes';
-export { StrapiApiKeyAttributes } from './oauth-api-key.attributes';
+export { StrapiOAuthAudienceAttributes } from './oauth-audience.attributes';
+export { StrapiOAuthApiKeyAttributes } from './oauth-api-key.attributes';
