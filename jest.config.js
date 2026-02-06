@@ -6,12 +6,18 @@ module.exports = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
-  collectCoverageFrom: ['libs/oauth/src/**/*.ts'],
+  collectCoverageFrom: [
+    'libs/oauth/src/**/*.ts',
+    'libs/control-plane/src/**/*.ts',
+    'libs/core/src/**/*.ts',
+    'apps/umoja-api/src/**/*.ts',
+    '!**/*.module.ts',
+  ],
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '.spec.ts$',
     'index.ts$',
-    'oauth.module.ts',
+    'main.ts',
   ],
   coverageDirectory: './coverage',
   testEnvironment: 'node',
